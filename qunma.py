@@ -43,7 +43,7 @@ def build_detail_flex(data_dict):
 
     # 欄位對照表（英文 → 中文）
     field_map = {
-        "car_no": "車號",
+        #"car_no": "車號",
         "name": "姓名",
         "sex": "性別",
         "tel": "電話",
@@ -150,7 +150,7 @@ def build_detail_flex(data_dict):
                             "type": "text",
                             "text": title,
                             "weight": "bold",
-                            "size": "xxl",
+                            "size": "xl",
                             "wrap": True,
                             "gravity": "center",  # 讓文字跟圖片上下置中
                         },
@@ -225,7 +225,7 @@ def build_detail_flexA(
 
     # 你的白名單 & 顯示名稱
     allowed_car_fields = [
-        "car_no",
+        #"car_no",
         "name",
         # "sex",
         "tel",
@@ -246,7 +246,7 @@ def build_detail_flexA(
     ]
 
     car_field_map = {
-        "car_no": "車號",
+        #"car_no": "車號",
         "name": "姓名",
         # "sex": "性別",
         "tel": "電話",
@@ -1619,5 +1619,6 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
 
