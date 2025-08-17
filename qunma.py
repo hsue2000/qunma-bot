@@ -806,7 +806,7 @@ def build_list_bubbleA(
                     {
                         "type": "text",
                         "text": a_item,
-                        "size": "sm",
+                        "size": "xs",
                         "flex": 3,
                         "wrap": True,
                         "align": "center",
@@ -1620,6 +1620,7 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
 
 
