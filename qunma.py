@@ -715,7 +715,7 @@ def build_list_bubbleA(
                 "text": "車號",
                 "size": "xs",
                 "weight": "bold",
-                "flex": 2,
+                "flex": 3,
                 "align": "center",
                 "wrap": True,
             },
@@ -724,7 +724,7 @@ def build_list_bubbleA(
                 "text": "姓名",
                 "size": "xs",
                 "weight": "bold",
-                "flex": 2,
+                "flex": 3,
                 "align": "center",
                 "wrap": True,
             },
@@ -733,7 +733,7 @@ def build_list_bubbleA(
                 "text": "服務項目",
                 "size": "xs",
                 "weight": "bold",
-                "flex": 6,
+                "flex": 3,
                 "align": "center",
                 "wrap": True,
             },
@@ -742,7 +742,7 @@ def build_list_bubbleA(
                 "text": "預約",
                 "size": "xs",
                 "weight": "bold",
-                "flex": 2,
+                "flex": 3,
                 "align": "center",
                 "wrap": True,
             },
@@ -776,9 +776,9 @@ def build_list_bubbleA(
         a_status = safe_text(w.get("A_status", ""))
 
         if a_status == "已完成":
-            a_item = "✅" + a_item
+            a_item = a_item + "✅"
         else:
-            a_item = "❌" + a_item
+            a_item = a_item + "❌"
 
         body.append(
             {
@@ -791,7 +791,7 @@ def build_list_bubbleA(
                         "type": "text",
                         "text": car_no,
                         "size": "sm",
-                        "flex": 2,
+                        "flex": 3,
                         "wrap": True,
                         "align": "center",
                     },
@@ -799,7 +799,7 @@ def build_list_bubbleA(
                         "type": "text",
                         "text": name,
                         "size": "sm",
-                        "flex": 2,
+                        "flex": 3,
                         "wrap": True,
                         "align": "center",
                     },
@@ -807,7 +807,7 @@ def build_list_bubbleA(
                         "type": "text",
                         "text": a_item,
                         "size": "sm",
-                        "flex": 6,
+                        "flex": 3,
                         "wrap": True,
                         "align": "center",
                     },
@@ -815,7 +815,7 @@ def build_list_bubbleA(
                         "type": "text",
                         "text": f"{a_ord_time}".strip(),
                         "size": "sm",
-                        "flex": 2,
+                        "flex": 3,
                         "wrap": True,
                         "align": "center",
                     },
@@ -1620,5 +1620,6 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
 
