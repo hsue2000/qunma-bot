@@ -1064,7 +1064,7 @@ def handle_message(event):
                                         },
                                         {
                                             "type": "text",
-                                            "text": "模糊搜尋車號",
+                                            "text": "模糊搜尋車籍車號",
                                             "weight": "bold",
                                             "size": "sm",
                                             "color": "#007AFF",
@@ -1087,7 +1087,7 @@ def handle_message(event):
                                         },
                                         {
                                             "type": "text",
-                                            "text": "模糊搜尋車型",
+                                            "text": "模糊搜尋車籍車型",
                                             "weight": "bold",
                                             "size": "sm",
                                             "color": "#007AFF",
@@ -1110,7 +1110,7 @@ def handle_message(event):
                                         },
                                         {
                                             "type": "text",
-                                            "text": "模糊搜尋電話",
+                                            "text": "模糊搜尋車籍電話",
                                             "weight": "bold",
                                             "size": "sm",
                                             "color": "#007AFF",
@@ -1133,7 +1133,7 @@ def handle_message(event):
                                         },
                                         {
                                             "type": "text",
-                                            "text": "模糊搜尋電話備註",
+                                            "text": "模糊搜尋車籍備註",
                                             "weight": "bold",
                                             "size": "sm",
                                             "color": "#007AFF",
@@ -1179,7 +1179,7 @@ def handle_message(event):
                                         },
                                         {
                                             "type": "text",
-                                            "text": "查詢車號",
+                                            "text": "查詢車籍車號",
                                             "weight": "bold",
                                             "size": "sm",
                                             "color": "#007AFF",
@@ -1619,4 +1619,5 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
