@@ -381,7 +381,7 @@ def build_detail_flexA(
                             "type": "text",
                             "text": title,
                             "weight": "bold",
-                            "size": "xxl",
+                            "size": "xl",
                             "wrap": True,
                             "gravity": "center",  # 讓文字跟圖片上下置中
                         },
@@ -1619,6 +1619,7 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
 
 
