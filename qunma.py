@@ -297,6 +297,7 @@ def build_detail_flexA(
                     "type": "box",
                     "layout": "baseline",
                     "spacing": "sm",
+                    "backgroundColor": "#FFFFBB" if idx % 2 == 0 else "#BBFFEE",
                     "contents": [
                         {
                             "type": "text",
@@ -346,6 +347,7 @@ def build_detail_flexA(
                             "type": "box",
                             "layout": "baseline",
                             "spacing": "sm",
+                            "backgroundColor": "#FFFFBB" if idx % 2 == 0 else "#BBFFEE",
                             "contents": [
                                 {
                                     "type": "text",
@@ -415,6 +417,7 @@ def build_detail_flexA(
                     "layout": "vertical",
                     "margin": "md",
                     "spacing": "md",
+                    "backgroundColor": "#FFFFBB" if idx % 2 == 0 else "#BBFFEE",
                     "contents": rows_car
                     or [
                         {
@@ -443,6 +446,7 @@ def build_detail_flexA(
                     "layout": "vertical",
                     "margin": "md",
                     "spacing": "md",
+                    "backgroundColor": "#FFFFBB" if idx % 2 == 0 else "#BBFFEE",
                     "contents": rows_washed
                     or [
                         {
@@ -1627,4 +1631,5 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
