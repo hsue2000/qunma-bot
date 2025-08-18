@@ -211,6 +211,9 @@ def build_detail_flexA(
         "A_item": "#FF44AA",  # 粉紅色
         "A_ord_time": "#227700",  # 綠色
         "A_money": "#FF4500",  # 橘色
+        "washes_total": "#000000",  # 黑色
+        "washes_pass": "#227700",  # 綠色
+        "washes_fail": "#FF44AA",  # 粉紅色
     }
 
     # ---- 安全處理參數 ----
@@ -243,6 +246,9 @@ def build_detail_flexA(
         "A_money",
         "A_status",
         "A_note",
+        "washes_total",
+        "washes_pass",
+        "washes_fail",
     ]
 
     car_field_map = {
@@ -261,10 +267,12 @@ def build_detail_flexA(
         "A_date": "預約日期",
         "A_time": "交車時間",
         "A_ord_time": "預約時間",
+        "A_money": "金額",
         "A_status": "狀態",
         "A_note": "洗車備註",
-        "A_final": "編輯時間",
-        "A_money": "金額",
+        "washes_total": "累計洗車",
+        "washes_pass": "已完成",
+        "washes_fail": "未完成",
     }
 
     def safe_text(x):
@@ -448,7 +456,7 @@ def build_detail_flexA(
             ],
         },
     }
-    return FlexSendMessage(alt_text="詳細資訊", contents=bubble)
+    return FlexSendMessage(alt_text="洗車詳細資訊", contents=bubble)
 
 
 ###################################################################################<<
@@ -463,13 +471,22 @@ API_TOKEN = os.getenv("API_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL")
 
 # 可使用的 LINE 使用者 ID 列表（White List）
+whitelist = {
+    "Ub48499f073b0bd08e280ef8259978933",  # 用戶A-Ken
+    "U073ecd7ad08b5e6f43736355fe8239e9",  # 用戶B-尉庭
+    "U2b172ae3f85d31f169915ca02330a589",  # 用戶C-爸爸
+    # 請將你自己的 LINE ID 也加入
+}
 
+"""
 # 從 Vercel 的環境變數讀取
 whitelist_str = os.getenv("LINE_WHITELIST", "")
 
 # 轉成 set（自動去除空白）
 whitelist = {uid.strip() for uid in whitelist_str.split(",") if uid.strip()}
 # print(whitelist)
+"""
+
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -671,7 +688,7 @@ def build_list_page(all_rows, page=1, title="查詢結果", query_cmd="名稱", 
         query_cmd=query_cmd,
         query_val=query_val,
     )
-    return FlexSendMessage(alt_text="查詢結果列表", contents=bubble)
+    return FlexSendMessage(alt_text="查詢車籍列表", contents=bubble)
 
 
 ################################################################################################>>
@@ -733,7 +750,7 @@ def build_list_bubbleA(
                 "text": "服務項目",
                 "size": "xs",
                 "weight": "bold",
-                "flex": 3,
+                "flex": 4,
                 "align": "center",
                 "wrap": True,
             },
@@ -742,7 +759,7 @@ def build_list_bubbleA(
                 "text": "預約",
                 "size": "xs",
                 "weight": "bold",
-                "flex": 3,
+                "flex": 2,
                 "align": "center",
                 "wrap": True,
             },
@@ -807,7 +824,7 @@ def build_list_bubbleA(
                         "type": "text",
                         "text": a_item,
                         "size": "xs",
-                        "flex": 3,
+                        "flex": 4,
                         "wrap": True,
                         "align": "center",
                     },
@@ -815,7 +832,7 @@ def build_list_bubbleA(
                         "type": "text",
                         "text": f"{a_ord_time}".strip(),
                         "size": "sm",
-                        "flex": 3,
+                        "flex": 2,
                         "wrap": True,
                         "align": "center",
                     },
@@ -894,7 +911,7 @@ def build_list_pageA(
         query_cmd=query_cmd,
         query_val=query_val,
     )
-    return FlexSendMessage(alt_text="查詢結果列表", contents=bubble)
+    return FlexSendMessage(alt_text="查詢今日洗車列表", contents=bubble)
 
 
 #############################################################################################<<
@@ -925,7 +942,7 @@ def handle_message(event):
 
     # 讀取用戶的ID
     user_id = event.source.user_id
-    print("發訊息的用戶 ID:", user_id)
+    # print("發訊息的用戶 ID:", user_id)
 
     url = f"https://hsue2000.synology.me/api/Qsearch.php?token={API_TOKEN}"
     data = {"action": "GET_COUNT"}
@@ -1523,7 +1540,7 @@ def handle_message(event):
             flex = build_list_pageA(
                 rows,
                 page=1,
-                title=f"洗車：{data.get('query_day', today_str)}",
+                title=f"今日洗車：{data.get('query_day', today_str)}",
                 query_cmd="洗車",
                 query_val=today_str,
             )
@@ -1613,14 +1630,10 @@ def handle_message(event):
     else:
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=f"❌ 查詢失敗，HTTP 錯誤碼：{response.status_code}"),
+            TextSendMessage(text=f"❌ 指令錯誤!"),
         )
         return
 
 
 if __name__ == "__main__":
     app.run(port=5000)
-
-
-
-
