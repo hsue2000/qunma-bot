@@ -334,10 +334,10 @@ def build_detail_flexA(
                 # 動態決定顏色
                 if k == "A_status":
                     if val == "已完成":
-                        val = val + "✅"
+                        val = val + " ✅"
                         val_color = "#9400D3"  # 紫色
                     else:
-                        val = val + "❌"
+                        val = val + " ❌"
                         val_color = "#FF8C00"  # 橘色
 
                 if safe_text(val):
@@ -1626,4 +1626,5 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
