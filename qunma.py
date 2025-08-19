@@ -737,7 +737,7 @@ def build_list_bubbleA(
             {
                 "type": "text",
                 "text": "服務項目",
-                "size": "sm",
+                "size": "xs",
                 "weight": "bold",
                 "flex": 3,
                 "align": "center",
@@ -812,7 +812,7 @@ def build_list_bubbleA(
                     {
                         "type": "text",
                         "text": a_item,
-                        "size": "xs",
+                        "size": "sm",
                         "flex": 3,
                         "wrap": True,
                         "align": "center",
@@ -1626,6 +1626,7 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
 
 
