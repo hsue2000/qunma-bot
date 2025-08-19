@@ -737,9 +737,9 @@ def build_list_bubbleA(
             {
                 "type": "text",
                 "text": "服務項目",
-                "size": "xs",
+                "size": "sm",
                 "weight": "bold",
-                "flex": 4,
+                "flex": 3,
                 "align": "center",
                 "wrap": True,
             },
@@ -748,7 +748,7 @@ def build_list_bubbleA(
                 "text": "預約",
                 "size": "xs",
                 "weight": "bold",
-                "flex": 2,
+                "flex": 3,
                 "align": "center",
                 "wrap": True,
             },
@@ -813,7 +813,7 @@ def build_list_bubbleA(
                         "type": "text",
                         "text": a_item,
                         "size": "xs",
-                        "flex": 4,
+                        "flex": 3,
                         "wrap": True,
                         "align": "center",
                     },
@@ -821,7 +821,7 @@ def build_list_bubbleA(
                         "type": "text",
                         "text": f"{a_ord_time}".strip(),
                         "size": "sm",
-                        "flex": 2,
+                        "flex": 3,
                         "wrap": True,
                         "align": "center",
                     },
@@ -1626,5 +1626,6 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
 
