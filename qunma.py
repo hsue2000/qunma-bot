@@ -135,11 +135,14 @@ def build_detail_flex(data_dict):
             )
 
     # ===== Flex bubble =====
+    bg = "#F8F8FF"
+
     bubble = {
         "type": "bubble",
         "body": {
             "type": "box",
             "layout": "vertical",
+            "backgroundColor": bg,  # ★ 讓整個 body 區域都有底色
             "contents": [
                 {  # 🔹 第一列：圖片 + 標題 並排
                     "type": "box",
@@ -171,6 +174,13 @@ def build_detail_flex(data_dict):
                     "contents": rows,
                 },
             ],
+        },
+        # ★ 建議補個 footer，讓底部也同底色（就算沒有元件也可留空）
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": bg,
+            "contents": [],
         },
     }
 
@@ -374,11 +384,14 @@ def build_detail_flexA(
         )
 
     # ===== Flex bubble =====
+    bg = "#FFFFF0"
+
     bubble = {
         "type": "bubble",
         "body": {
             "type": "box",
             "layout": "vertical",
+            "backgroundColor": bg,  # ★ 整個 body 區塊同底色
             "contents": [
                 {
                     "type": "box",
@@ -391,14 +404,14 @@ def build_detail_flexA(
                             "weight": "bold",
                             "size": "xl",
                             "wrap": True,
-                            "gravity": "center",  # 讓文字跟圖片上下置中
+                            "gravity": "center",
                         },
                         {
                             "type": "image",
                             "url": pic_url,
                             "size": "xs",
                             "aspectMode": "fit",
-                            "align": "end",  # 圖片靠右
+                            "align": "end",
                         },
                     ],
                 },
@@ -425,12 +438,9 @@ def build_detail_flexA(
                         }
                     ],
                 },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "height": "12px",  # 你要的空白高度
-                },
-                {"type": "separator", "margin": "md"},
+                {"type": "box", "layout": "vertical", "height": "12px"},
+                {"type": "separator", "margin": "lg"},
+                {"type": "box", "layout": "vertical", "height": "8px"},  # 下方留白
                 {
                     "type": "text",
                     "text": "<今日洗車>",
@@ -455,6 +465,13 @@ def build_detail_flexA(
                 },
             ],
         },
+        # ★ 加一個 footer（就算內容空，也讓底色一致）
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": bg,
+            "contents": [],
+        },
     }
     return FlexSendMessage(alt_text="洗車詳細資訊", contents=bubble)
 
@@ -471,11 +488,42 @@ API_TOKEN = os.getenv("API_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL")
 
 # 可使用的 LINE 使用者 ID 列表（White List）
+whitelist = {
+    "Ub48499f073b0bd08e280ef8259978933",  # 用戶A-Ken
+    "U073ecd7ad08b5e6f43736355fe8239e9",  # 用戶B-尉庭
+    "U2b172ae3f85d31f169915ca02330a589",  # 用戶C-爸爸
+    # 請將你自己的 LINE ID 也加入
+}
+
+"""
 # 從 Vercel 的環境變數讀取
 whitelist_str = os.getenv("LINE_WHITELIST", "")
 
 # 轉成 set（自動去除空白）
 whitelist = {uid.strip() for uid in whitelist_str.split(",") if uid.strip()}
+# print(whitelist)
+"""
+
+CHANNEL_ACCESS_TOKEN = (os.getenv("LINE_CHANNEL_ACCESS_TOKEN") or "").strip().strip('"')
+CHANNEL_SECRET = (os.getenv("LINE_CHANNEL_SECRET") or "").strip().strip('"')
+
+
+def show_loading_raw(user_id: str, seconds: int = 10):
+    if not (user_id and user_id.startswith("U")):
+        return
+    seconds = max(5, min(int(seconds), 60))
+    if seconds % 5 != 0:
+        seconds = int(round(seconds / 5) * 5)
+    requests.post(
+        "https://api.line.me/v2/bot/chat/loading/start",
+        headers={
+            "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}",
+            "Content-Type": "application/json",
+        },
+        json={"chatId": user_id, "loadingSeconds": seconds},
+        timeout=10,
+    )
+
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -904,8 +952,6 @@ def build_list_pageA(
 
 
 #############################################################################################<<
-
-
 def format_phone(phone: str) -> str:
     """將10碼電話轉成 xxxx-xxx-xxx 格式"""
     digits = "".join(filter(str.isdigit, str(phone)))
@@ -931,7 +977,10 @@ def handle_message(event):
 
     # 讀取用戶的ID
     user_id = event.source.user_id
-    # print("發訊息的用戶 ID:", user_id)
+    # print("發訊息的用戶 ID:",user_id)
+
+    if user_id:
+        show_loading_raw(user_id, seconds=10)
 
     url = f"https://hsue2000.synology.me/api/Qsearch.php?token={API_TOKEN}"
     data = {"action": "GET_COUNT"}
@@ -995,7 +1044,7 @@ def handle_message(event):
                         },
                         {
                             "type": "text",
-                            "text": "版本: V1.0 (2025/8/18)",
+                            "text": "版本: V1.0 (2025/8/19)",
                             "size": "sm",
                             "weight": "bold",
                             "wrap": True,
@@ -1619,14 +1668,10 @@ def handle_message(event):
     else:
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=f"❌ 指令錯誤!"),
+            TextSendMessage(text=f"❌ 指令錯誤,請重新輸入!"),
         )
         return
 
 
 if __name__ == "__main__":
     app.run(port=5000)
-
-
-
-
