@@ -2,14 +2,20 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
-import requests
 
 import os
 import requests
 from urllib.parse import quote
 from linebot.models import TextSendMessage, FlexSendMessage
 
+from linebot import LineBotApi
 from linebot.models import (
+    RichMenu,
+    RichMenuArea,
+    RichMenuBounds,
+    RichMenuSize,
+    MessageAction,
+    URIAction,
     TextSendMessage,
     FlexSendMessage,
     QuickReply,
@@ -17,7 +23,10 @@ from linebot.models import (
     MessageAction,
 )
 
+from io import BytesIO
+
 import requests
+import json
 from linebot.models import FlexSendMessage
 
 from datetime import datetime
@@ -488,15 +497,73 @@ API_TOKEN = os.getenv("API_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL")
 
 # 可使用的 LINE 使用者 ID 列表（White List）
+whitelist = {
+    "Ub48499f073b0bd08e280ef8259978933",  # 用戶A-Ken
+    "U073ecd7ad08b5e6f43736355fe8239e9",  # 用戶B-尉庭
+    "U2b172ae3f85d31f169915ca02330a589",  # 用戶C-爸爸
+    # 請將你自己的 LINE ID 也加入
+}
+
+"""
 # 從 Vercel 的環境變數讀取
 whitelist_str = os.getenv("LINE_WHITELIST", "")
 
 # 轉成 set（自動去除空白）
 whitelist = {uid.strip() for uid in whitelist_str.split(",") if uid.strip()}
 # print(whitelist)
+"""
 
 CHANNEL_ACCESS_TOKEN = (os.getenv("LINE_CHANNEL_ACCESS_TOKEN") or "").strip().strip('"')
 CHANNEL_SECRET = (os.getenv("LINE_CHANNEL_SECRET") or "").strip().strip('"')
+
+
+# 使用你的 Channel Access Token
+line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
+
+# 建立 Rich Menu
+rich_menu = RichMenu(
+    size=RichMenuSize(width=2500, height=843),  # 官方規格
+    selected=False,  # 是否預設選單
+    name="四格選單範例",  # 後台管理用名稱
+    chat_bar_text="打開選單",  # 使用者點選時顯示的文字
+    areas=[
+        # 左1區塊
+        RichMenuArea(
+            bounds=RichMenuBounds(x=0, y=0, width=625, height=843),
+            action=MessageAction(label="1", text="今日"),
+        ),
+        # 左2區塊
+        RichMenuArea(
+            bounds=RichMenuBounds(x=625, y=0, width=625, height=843),
+            action=MessageAction(label="2", text="未使用"),
+        ),
+        # 左3區塊
+        RichMenuArea(
+            bounds=RichMenuBounds(x=1250, y=0, width=625, height=843),
+            action=MessageAction(label="3", text="?"),
+        ),
+        # 左4區塊
+        RichMenuArea(
+            bounds=RichMenuBounds(x=1875, y=0, width=625, height=843),
+            action=MessageAction(label="4", text="關於"),
+        ),
+    ],
+)
+
+rich_menu_id = line_bot_api.create_rich_menu(rich_menu=rich_menu)
+
+# 透過網址下載圖片
+image_url = "https://hsue2000.synology.me/images/Qunma_richmenu_1x4.png"  # 改成你的 CDN/圖床位置
+response = requests.get(image_url)
+image_data = BytesIO(response.content)
+
+# 上傳圖片
+line_bot_api.set_rich_menu_image(rich_menu_id, "image/png", image_data)
+
+# 設為預設選單
+line_bot_api.set_default_rich_menu(rich_menu_id)
+
+######################################################################
 
 
 def show_loading_raw(user_id: str, seconds: int = 10):
@@ -1035,7 +1102,7 @@ def handle_message(event):
                         },
                         {
                             "type": "text",
-                            "text": "版本: V1.0 (2025/8/19)",
+                            "text": "版本: V1.0 (2025/8/21)",
                             "size": "sm",
                             "weight": "bold",
                             "wrap": True,
@@ -1195,29 +1262,6 @@ def handle_message(event):
                                     "contents": [
                                         {
                                             "type": "text",
-                                            "text": "♦️ 今日",
-                                            "weight": "bold",
-                                            "size": "sm",
-                                            "color": "#000000",
-                                            "flex": 6,
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "查詢今日洗車資訊",
-                                            "weight": "bold",
-                                            "size": "sm",
-                                            "color": "#007AFF",
-                                            "flex": 6,
-                                            "wrap": True,
-                                        },
-                                    ],
-                                },
-                                {
-                                    "type": "box",
-                                    "layout": "baseline",
-                                    "contents": [
-                                        {
-                                            "type": "text",
                                             "text": "♦️ 車號 [車號]",
                                             "weight": "bold",
                                             "size": "sm",
@@ -1227,52 +1271,6 @@ def handle_message(event):
                                         {
                                             "type": "text",
                                             "text": "查詢車籍車號",
-                                            "weight": "bold",
-                                            "size": "sm",
-                                            "color": "#007AFF",
-                                            "flex": 6,
-                                            "wrap": True,
-                                        },
-                                    ],
-                                },
-                                {
-                                    "type": "box",
-                                    "layout": "baseline",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "♦️ 關於",
-                                            "weight": "bold",
-                                            "size": "sm",
-                                            "color": "#000000",
-                                            "flex": 6,
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "作者資訊",
-                                            "weight": "bold",
-                                            "size": "sm",
-                                            "color": "#007AFF",
-                                            "flex": 6,
-                                            "wrap": True,
-                                        },
-                                    ],
-                                },
-                                {
-                                    "type": "box",
-                                    "layout": "baseline",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "♦️ ? 或 ？",
-                                            "weight": "bold",
-                                            "size": "sm",
-                                            "color": "#000000",
-                                            "flex": 6,
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "顯示本指令列表",
                                             "weight": "bold",
                                             "size": "sm",
                                             "color": "#007AFF",
@@ -1666,4 +1664,3 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
-
