@@ -543,7 +543,7 @@ rich_menu = RichMenu(
 rich_menu_id = line_bot_api.create_rich_menu(rich_menu=rich_menu)
 
 # 透過網址下載圖片
-image_url = "https://hsue2000.synology.me/images/Qunma_richmenu_1x4.png"  # 改成你的 CDN/圖床位置
+image_url = "https://hsue2000.synology.me/images/Qunma_richmenu_1x4-1.png"  # 改成你的 CDN/圖床位置
 response = requests.get(image_url)
 image_data = BytesIO(response.content)
 
@@ -1654,4 +1654,5 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
