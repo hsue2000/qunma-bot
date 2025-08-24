@@ -1286,16 +1286,16 @@ def build_list_bubbleB(
                 "text": "日期",
                 "size": "sm",
                 "weight": "bold",
-                "flex": 5,
+                "flex": 6,
                 "align": "center",
                 "wrap": True,
             },
             {
                 "type": "text",
-                "text": "車量(台)",
+                "text": "台",
                 "size": "sm",
                 "weight": "bold",
-                "flex": 3,
+                "flex": 2,
                 "align": "center",
                 "wrap": True,
             },
@@ -1358,7 +1358,7 @@ def build_list_bubbleB(
                         "type": "text",
                         "text": format_date_with_weekday(day),
                         "size": "sm",
-                        "flex": 5,
+                        "flex": 6,
                         "wrap": True,
                         "align": "center",
                     },
@@ -1366,7 +1366,7 @@ def build_list_bubbleB(
                         "type": "text",
                         "text": cnt,
                         "size": "sm",
-                        "flex": 3,
+                        "flex": 2,
                         "wrap": True,
                         "color": "#0000FF",
                         "align": "center",
@@ -2412,3 +2412,4 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
