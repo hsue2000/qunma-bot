@@ -35,14 +35,29 @@ from urllib.parse import parse_qs
 import requests
 import json
 from linebot.models import FlexSendMessage
-
-from datetime import datetime
 from urllib.parse import quote
-from datetime import datetime
+
 import pytz
 from urllib.parse import urlencode
+import datetime
+from pytz import timezone  # 如果要台灣時區
 
 session_store = {}  # { user_id: { "last_results": [...] } }
+
+
+def format_date_with_weekday(date_str: str | None) -> str:
+    """
+    傳入 YYYY-MM-DD，回傳 YYYY-MM-DD(週)
+    若是 None 或空字串 → 回傳 "未選"
+    """
+    if not date_str:  # 這裡會擋掉 None 或空字串
+        return "未選擇"
+    try:
+        d = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+        weekdays = ["一", "二", "三", "四", "五", "六", "日"]
+        return f"{date_str}({weekdays[d.weekday()]})"
+    except Exception:
+        return date_str  # 如果格式錯誤，就原樣回傳
 
 
 def check_image_url(url):
@@ -372,6 +387,13 @@ def build_detail_flexA(
                         val = val + "查無資料"
                         val_color = "#FF0000"  # 紅色
 
+                # ★fix: 只有在欄位是 A_date 才做日期格式化
+                if k == "A_date":
+                    if val:
+                        val = format_date_with_weekday(val)  # e.g. "2025-08-24(日)"
+                    else:
+                        val = "未選擇"
+
                 if safe_text(val):
                     rows_washed.append(
                         {
@@ -520,7 +542,6 @@ whitelist = {uid.strip() for uid in whitelist_str.split(",") if uid.strip()}
 CHANNEL_ACCESS_TOKEN = (os.getenv("LINE_CHANNEL_ACCESS_TOKEN") or "").strip().strip('"')
 CHANNEL_SECRET = (os.getenv("LINE_CHANNEL_SECRET") or "").strip().strip('"')
 
-
 # 使用你的 Channel Access Token
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 
@@ -624,7 +645,7 @@ def build_choose_next_step_bubble(keyword, start, end=None, hint=None):
         },
         {
             "type": "text",
-            "text": f"{start}",
+            "text": format_date_with_weekday(f"{start}"),
             "weight": "bold",
             "size": "md",
             "align": "center",
@@ -783,8 +804,8 @@ def build_date_picker_bubble(
     body_contents += [
         # 若你也想顯示關鍵字可把下一行解註
         # tag("關鍵字", keyword),
-        tag("起始日", start),
-        tag("結束日", end),
+        tag("起始日", format_date_with_weekday(start)),
+        tag("結束日", format_date_with_weekday(end)),
     ]
 
     bubble = {
@@ -1335,7 +1356,7 @@ def build_list_bubbleB(
                 "contents": [
                     {
                         "type": "text",
-                        "text": day,
+                        "text": format_date_with_weekday(day),
                         "size": "sm",
                         "flex": 5,
                         "wrap": True,
@@ -1496,7 +1517,7 @@ def on_postback(event):
             try:
                 if _to_date(picked) < _to_date(start):
                     msg = build_date_picker_bubble(
-                        kw, start, None, hint="結束日不可早於起始日，請重新選擇結束日"
+                        kw, start, None, hint="⚠️ 結束日不可早於起始日，請重新選擇結束日"
                     )
                     line_bot_api.reply_message(event.reply_token, msg)
                     return
@@ -1511,7 +1532,7 @@ def on_postback(event):
     if act == "submit_single":
         if not start:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="請先選擇日期")
+                event.reply_token, TextSendMessage(text="⚠️ 請先選擇日期")
             )
             return
         # ✅ 這裡執行你的「單日」查詢
@@ -1525,20 +1546,20 @@ def on_postback(event):
     if act == "submit":
         if not (start and end):
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="請先選擇起始日與結束日")
+                event.reply_token, TextSendMessage(text="⚠️ 請先選擇起始日與結束日")
             )
             return
         try:
             if _to_date(end) < _to_date(start):
                 # 清掉 end，強制重選
                 msg = build_date_picker_bubble(
-                    kw, start, None, hint="結束日不可早於起始日，請重新選擇結束日"
+                    kw, start, None, hint="⚠️ 結束日不可早於起始日，請重新選擇結束日"
                 )
                 line_bot_api.reply_message(event.reply_token, msg)
                 return
         except Exception:
             msg = build_date_picker_bubble(
-                kw, start, None, hint="日期格式錯誤，請重新選擇結束日"
+                kw, start, None, hint="⚠️ 日期格式錯誤，請重新選擇結束日"
             )
             line_bot_api.reply_message(event.reply_token, msg)
             return
@@ -1846,7 +1867,7 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex)
         else:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查無車籍資料")
+                event.reply_token, TextSendMessage(text="⚠️ 查無車籍資料")
             )
         return
 
@@ -1856,7 +1877,7 @@ def handle_message(event):
         if len(parts) != 4:
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="分頁參數不足，請用：列表 洗車 2025-08-14 1"),
+                TextSendMessage(text="⚠️ 分頁參數不足，請用：列表 洗車 2025-08-14 1"),
             )
             return  # ← 不足就直接結束
 
@@ -1885,7 +1906,7 @@ def handle_message(event):
             except Exception as e:
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text=f"查詢失敗：後端連線錯誤 {e}"),
+                    TextSendMessage(text=f"⚠️ 查詢失敗：後端連線錯誤 {e}"),
                 )
                 return
 
@@ -1893,7 +1914,7 @@ def handle_message(event):
             if not r.ok or not ctype.startswith("application/json"):
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text=f"查詢失敗：非 JSON 回應 ({r.status_code})"),
+                    TextSendMessage(text=f"⚠️ 查詢失敗：非 JSON 回應 ({r.status_code})"),
                 )
                 return
 
@@ -1901,14 +1922,14 @@ def handle_message(event):
                 data = r.json()
             except ValueError:
                 line_bot_api.reply_message(
-                    event.reply_token, TextSendMessage(text="查詢失敗：JSON 解析錯誤")
+                    event.reply_token, TextSendMessage(text="⚠️ 查詢失敗：JSON 解析錯誤")
                 )
                 return
 
             if isinstance(data, dict) and data.get("error"):
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text=f"查詢失敗：{data['error']}"),
+                    TextSendMessage(text=f"⚠️ 查詢失敗：{data['error']}"),
                 )
                 return
 
@@ -1930,7 +1951,7 @@ def handle_message(event):
                 line_bot_api.reply_message(event.reply_token, flex)
             else:
                 line_bot_api.reply_message(
-                    event.reply_token, TextSendMessage(text=f"{val} 查無資料")
+                    event.reply_token, TextSendMessage(text=f"⚠️ {val} 查無資料")
                 )
             return  # ← 洗車分支做完就結束，不會往下跑
 
@@ -1945,7 +1966,7 @@ def handle_message(event):
         if not key:
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="不支援的查詢類型!"),
+                TextSendMessage(text="⚠️ 不支援的查詢類型!"),
             )
             return
 
@@ -1958,7 +1979,7 @@ def handle_message(event):
             )
         except Exception as e:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text=f"查詢失敗：後端連線錯誤 {e}")
+                event.reply_token, TextSendMessage(text=f"⚠️ 查詢失敗：後端連線錯誤 {e}")
             )
             return
 
@@ -1966,7 +1987,7 @@ def handle_message(event):
         if not res.ok or not ctype2.startswith("application/json"):
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text=f"查詢失敗：非 JSON 回應 ({res.status_code})"),
+                TextSendMessage(text=f"⚠️ 查詢失敗：非 JSON 回應 ({res.status_code})"),
             )
             return
 
@@ -1974,7 +1995,7 @@ def handle_message(event):
             data = res.json()
         except ValueError:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查詢失敗：JSON 解析錯誤")
+                event.reply_token, TextSendMessage(text="⚠️ 查詢失敗：JSON 解析錯誤")
             )
             return
 
@@ -1994,7 +2015,7 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex)
         else:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text=f"{val} 查無資料")
+                event.reply_token, TextSendMessage(text=f"⚠️ {val} 查無資料")
             )
             return  # ← 其他條件分支也結束
 
@@ -2002,7 +2023,7 @@ def handle_message(event):
         tokens = user_text.split()
         if len(tokens) < 3:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="參數不足")
+                event.reply_token, TextSendMessage(text="⚠️ 參數不足")
             )
             return
 
@@ -2016,7 +2037,7 @@ def handle_message(event):
 
         if not core_tokens:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="參數不足")
+                event.reply_token, TextSendMessage(text="⚠️ 參數不足")
             )
             return
 
@@ -2041,7 +2062,7 @@ def handle_message(event):
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(
-                    text="日期參數缺少，請用：日列 日期 2025-08-01 2025-08-19 2"
+                    text="⚠️ 日期參數缺少，請用：日列 日期 2025-08-01 2025-08-19 2"
                 ),
             )
             return
@@ -2065,13 +2086,13 @@ def handle_message(event):
             rows_all = r.json()
         except Exception:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="API 回應非 JSON")
+                event.reply_token, TextSendMessage(text="⚠️ API 回應非 JSON")
             )
             return
 
         if not isinstance(rows_all, list) or not rows_all:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查無日期資料")
+                event.reply_token, TextSendMessage(text="⚠️ 查無日期資料")
             )
             return
 
@@ -2101,7 +2122,7 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex)
         else:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查無車型資料")
+                event.reply_token, TextSendMessage(text="⚠️ 查無車型資料")
             )
         return
 
@@ -2118,7 +2139,7 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex)
         else:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查無電話資料")
+                event.reply_token, TextSendMessage(text="⚠️ 查無電話資料")
             )
         return
 
@@ -2135,7 +2156,7 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex)
         else:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查無備註資料")
+                event.reply_token, TextSendMessage(text="⚠️ 查無備註資料")
             )
         return
 
@@ -2143,8 +2164,9 @@ def handle_message(event):
 
         if user_text.startswith("今日"):
             # 1) 取得今日日期 (YYYY-MM-DD)，這裡時區計算皆可換成「台灣時區」版本
-            taiwan_tz = pytz.timezone("Asia/Taipei")
-            today_str = datetime.now(taiwan_tz).strftime("%Y-%m-%d")
+            taiwan_tz = timezone("Asia/Taipei")
+            today_str = datetime.datetime.now(taiwan_tz).strftime("%Y-%m-%d")
+            # today_str = "2025-08-08"
         elif user_text.startswith("其他日 "):
             today_str = user_text.replace("其他日 ", "").strip()
 
@@ -2169,7 +2191,7 @@ def handle_message(event):
             )
         except Exception as e:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text=f"查詢失敗：後端連線錯誤 {e}")
+                event.reply_token, TextSendMessage(text=f"⚠️ 查詢失敗：後端連線錯誤 {e}")
             )
             return
 
@@ -2191,28 +2213,33 @@ def handle_message(event):
             data = r.json()
         except ValueError:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text=f"查詢失敗：JSON 解析錯誤")
+                event.reply_token, TextSendMessage(text=f"⚠️ 查詢失敗：JSON 解析錯誤")
             )
             return
 
         # 5) 取出 cars 陣列
         rows = data.get("cars", [])
 
+        # ★修改：先決定原始日期字串與格式化後字串
+        query_day_raw = data.get("query_day") or today_str  # e.g. "2025-08-24"
+        query_day_fmt = format_date_with_weekday(query_day_raw)  # e.g. "2025-08-24(日)"
+
         if rows:
             flex = build_list_pageA(
                 rows,
                 page=1,
-                title=f"洗車日期：{data.get('query_day', today_str)}",
+                title=f"洗車日期：{query_day_fmt}",  # ★修改：顯示帶星期
                 query_cmd="洗車",
-                query_val=today_str,
+                query_val=query_day_raw,  # ★修改：建議把原始日期往下傳（之後好再運算）
             )
             line_bot_api.reply_message(event.reply_token, flex)
         else:
+            # 統一套上星期幾
+            text = f"⚠️ {query_day_fmt} 查無洗車資料"  # ★修改：顯示帶星期
+
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(
-                    text=f"{data.get('query_day', today_str)} 查無洗車資料"
-                ),
+                TextSendMessage(text=text),
             )
         return
 
@@ -2228,7 +2255,7 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex_msg)
         else:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查無車號資料")
+                event.reply_token, TextSendMessage(text="⚠️ 查無車號資料")
             )
             return
 
@@ -2240,7 +2267,7 @@ def handle_message(event):
         if len(parts) < 2:
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="用法：日期 2025-08-01 2025-09-01"),
+                TextSendMessage(text="⚠️ 用法：日期 2025-08-01 2025-09-01"),
             )
             return
 
@@ -2282,7 +2309,7 @@ def handle_message(event):
             res = r.json()
         except Exception:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="API 回應非 JSON")
+                event.reply_token, TextSendMessage(text="⚠️ API 回應非 JSON")
             )
             return
 
@@ -2299,7 +2326,7 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex_msg)
         else:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查無日期資料")
+                event.reply_token, TextSendMessage(text="⚠️ 查無日期資料")
             )
             return
 
@@ -2359,14 +2386,14 @@ def handle_message(event):
         # 沒任一資料就回覆
         if not car_dict and not washes_list:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查無服務資料")
+                event.reply_token, TextSendMessage(text="⚠️ 查無服務資料")
             )
             return
 
         # ✅ 若洗車沒資料就直接回文字，不進 Flex
         if not washes_list:
             line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="查無資料")
+                event.reply_token, TextSendMessage(text="⚠️ 查無洗車資料")
             )
             return
 
@@ -2378,11 +2405,10 @@ def handle_message(event):
     else:
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=f"❌ 指令錯誤,請重新輸入!"),
+            TextSendMessage(text=f"⚠️ 指令錯誤,請重新輸入!"),
         )
         return
 
 
 if __name__ == "__main__":
     app.run(port=5000)
-
