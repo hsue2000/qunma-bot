@@ -2,11 +2,18 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.models import (
+    QuickReply,
+    QuickReplyButton,
+    MessageAction,
+    DatetimePickerAction,
+)
 
+import re
 import os
 import requests
 from urllib.parse import quote
-from linebot.models import TextSendMessage, FlexSendMessage
+from linebot.models import TextSendMessage, FlexSendMessage, PostbackEvent
 
 from linebot import LineBotApi
 from linebot.models import (
@@ -24,13 +31,16 @@ from linebot.models import (
 )
 
 from io import BytesIO
-
+from urllib.parse import parse_qs
 import requests
 import json
 from linebot.models import FlexSendMessage
 
 from datetime import datetime
 from urllib.parse import quote
+from datetime import datetime
+import pytz
+from urllib.parse import urlencode
 
 session_store = {}  # { user_id: { "last_results": [...] } }
 
@@ -355,9 +365,12 @@ def build_detail_flexA(
                     if val == "已完成":
                         val = val + " ✅"
                         val_color = "#9400D3"  # 紫色
-                    else:
+                    elif val == "未完成":
                         val = val + " ❌"
                         val_color = "#FF8C00"  # 橘色
+                    else:
+                        val = val + "查無資料"
+                        val_color = "#FF0000"  # 紅色
 
                 if safe_text(val):
                     rows_washed.append(
@@ -497,15 +510,25 @@ API_TOKEN = os.getenv("API_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL")
 
 # 可使用的 LINE 使用者 ID 列表（White List）
+whitelist = {
+    "Ub48499f073b0bd08e280ef8259978933",  # 用戶A-Ken
+    "U073ecd7ad08b5e6f43736355fe8239e9",  # 用戶B-尉庭
+    "U2b172ae3f85d31f169915ca02330a589",  # 用戶C-爸爸
+    # 請將你自己的 LINE ID 也加入
+}
+
+"""
 # 從 Vercel 的環境變數讀取
 whitelist_str = os.getenv("LINE_WHITELIST", "")
 
 # 轉成 set（自動去除空白）
 whitelist = {uid.strip() for uid in whitelist_str.split(",") if uid.strip()}
 # print(whitelist)
+"""
 
 CHANNEL_ACCESS_TOKEN = (os.getenv("LINE_CHANNEL_ACCESS_TOKEN") or "").strip().strip('"')
 CHANNEL_SECRET = (os.getenv("LINE_CHANNEL_SECRET") or "").strip().strip('"')
+
 
 # 使用你的 Channel Access Token
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
@@ -525,7 +548,7 @@ rich_menu = RichMenu(
         # 左2區塊
         RichMenuArea(
             bounds=RichMenuBounds(x=625, y=0, width=625, height=843),
-            action=MessageAction(label="2", text="未使用"),
+            action=MessageAction(label="2", text="區間"),
         ),
         # 左3區塊
         RichMenuArea(
@@ -543,7 +566,9 @@ rich_menu = RichMenu(
 rich_menu_id = line_bot_api.create_rich_menu(rich_menu=rich_menu)
 
 # 透過網址下載圖片
-image_url = "https://hsue2000.synology.me/images/Qunma_richmenu_1x4-1.png"  # 改成你的 CDN/圖床位置
+image_url = (
+    "https://hsue2000.synology.me/images/Qunma_1x4_new.png"  # 改成你的 CDN/圖床位置
+)
 response = requests.get(image_url)
 image_data = BytesIO(response.content)
 
@@ -589,6 +614,207 @@ def callback():
 ROWS_PER_PAGE = 10  # 每頁筆數
 
 
+def build_choose_next_step_bubble(keyword, start, end=None, hint=None):
+    items = [
+        {
+            "type": "text",
+            "text": "區間日期查詢",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+        },
+        {
+            "type": "text",
+            "text": "已選起始日",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+            "color": "#0000FF",
+        },
+        {
+            "type": "text",
+            "text": f"{start}",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+            "color": "#333333",
+        },
+    ]
+    if hint and hint.strip():
+        items.append(
+            {
+                "type": "text",
+                "text": hint.strip(),
+                "size": "xs",
+                "align": "center",
+                "color": "#CC0000",
+            }
+        )  # 紅字
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": items,
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "color": "#3B82F6",  # 【★新增 顏色】primary 改藍色(#3B82F6)
+                    "action": {
+                        "type": "postback",
+                        "label": "🔍 查這一天",
+                        "data": f"act=submit_single&kw={keyword}&start={start}",
+                        "text": f"日期 {start} {start}",  # 讓「使用者」送出
+                    },
+                },
+                {
+                    "type": "button",
+                    "style": "secondary",
+                    "height": "sm",
+                    "color": "#F0AD4E",  # 【★新增 顏色】secondary 設橘色(#F0AD4E)
+                    "action": {
+                        "type": "datetimepicker",
+                        "label": "📅 選擇結束日",
+                        "data": f"act=set_end&kw={keyword}&start={start}",
+                        "mode": "date",
+                        "initial": start,
+                    },
+                },
+            ],
+        },
+    }
+    return FlexSendMessage(alt_text="選擇單日或區間", contents=bubble)
+
+
+def build_date_picker_bubble(
+    keyword: str, start: str | None, end: str | None, hint: str | None = None
+):
+    def tag(lbl, val):
+        return {
+            "type": "box",
+            "layout": "baseline",
+            "spacing": "md",
+            "contents": [
+                {"type": "text", "text": lbl, "size": "md", "color": "#555555"},
+                {
+                    "type": "text",
+                    "text": (val or "未選擇"),
+                    "size": "md",
+                    "color": "#111111",
+                    "wrap": True,
+                },
+            ],
+        }
+
+    # footer：一次只顯示一個動作
+    footer_contents = []
+
+    if not start:
+        # 第一步：只讓選起始日
+        footer_contents.append(
+            {
+                "type": "button",
+                "style": "primary",
+                "height": "md",
+                "action": {
+                    "type": "datetimepicker",
+                    "label": "📅 選起始日",
+                    "data": f"act=set_start&kw={keyword}&end=",
+                    "mode": "date",
+                },
+            }
+        )
+    elif not end:
+        # 第二步：只讓選結束日
+        footer_contents.append(
+            {
+                "type": "button",
+                "style": "secondary",
+                "color": "#F0AD4E",
+                "height": "md",
+                "action": {
+                    "type": "datetimepicker",
+                    "label": "📅 選結束日",
+                    "data": f"act=set_end&kw={keyword}&start={start}",
+                    "mode": "date",
+                },
+            }
+        )
+
+    else:
+        # 第三步：只顯示「開始查詢」
+        footer_contents.append(
+            {
+                "type": "button",
+                "style": "primary",
+                "height": "md",
+                "action": {
+                    "type": "message",
+                    "label": "🔍 開始查詢",
+                    "text": f"日期 {start} {end}",
+                },
+            }
+        )
+
+    # ✅ body：標題 → (可選)紅字 hint → 起訖日
+    body_contents = [
+        {
+            "type": "text",
+            "text": "區間日期查詢",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+            "wrap": True,
+        }
+    ]
+    if hint and hint.strip():
+        body_contents.append(
+            {
+                "type": "text",
+                "text": hint.strip(),
+                "size": "xs",
+                "align": "center",
+                "color": "#CC0000",  # 紅字
+                "wrap": True,
+                "margin": "sm",
+            }
+        )
+
+    body_contents += [
+        # 若你也想顯示關鍵字可把下一行解註
+        # tag("關鍵字", keyword),
+        tag("起始日", start),
+        tag("結束日", end),
+    ]
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": body_contents,
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": footer_contents,
+        },
+    }
+    return FlexSendMessage(alt_text="區間日期查詢", contents=bubble)
+
+
+####################################################################################################
 def build_list_bubble(
     rows,
     title,
@@ -647,7 +873,14 @@ def build_list_bubble(
     body = [
         {
             "type": "text",
-            "text": f"{title} (第{page}/{total_pages}頁)",
+            "text": f"{title}",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+        },
+        {
+            "type": "text",
+            "text": f"(第{page}/{total_pages}頁)",
             "weight": "bold",
             "size": "md",
             "align": "center",
@@ -721,7 +954,7 @@ def build_list_bubble(
                 "height": "sm",
                 "action": {
                     "type": "message",
-                    "label": "上一頁",
+                    "label": "⏮️ 上一頁",
                     "text": f"列表 {query_cmd} {query_val} {page-1}",
                 },
             }
@@ -734,7 +967,7 @@ def build_list_bubble(
                 "height": "sm",
                 "action": {
                     "type": "message",
-                    "label": "下一頁",
+                    "label": "⏭️ 下一頁",
                     "text": f"列表 {query_cmd} {query_val} {page+1}",
                 },
             }
@@ -854,10 +1087,26 @@ def build_list_bubbleA(
     body = [
         {
             "type": "text",
-            "text": f"{title} (第{page}/{total_pages}頁)",
+            "text": f"{title}",
             "weight": "bold",
             "size": "md",
             "align": "center",
+        },
+        {
+            "type": "text",
+            "text": f"(第{page}/{total_pages}頁)",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+        },
+        {
+            "type": "text",
+            "text": "狀態表示: ✅已完成｜❌未完成",
+            "size": "xs",
+            "align": "center",
+            "color": "#666666",  # 6 碼 HEX
+            "wrap": True,
+            "margin": "sm",
         },
         {"type": "separator", "margin": "md"},
         header,
@@ -874,13 +1123,16 @@ def build_list_bubbleA(
         # 這裡示範把 washes[0] 的 A_date/A_time 顯示在「預約時間」欄位
         a_item = safe_text(w.get("A_item", ""))
         a_time = safe_text(w.get("A_time", ""))
+        a_date = safe_text(w.get("A_date", ""))
         a_ord_time = safe_text(w.get("A_ord_time", ""))
         a_status = safe_text(w.get("A_status", ""))
 
         if a_status == "已完成":
             a_item = a_item + "✅"
-        else:
+        elif a_status == "未完成":
             a_item = a_item + "❌"
+        else:
+            a_item = ""
 
         body.append(
             {
@@ -925,7 +1177,7 @@ def build_list_bubbleA(
                 "action": {
                     "type": "message",
                     "label": "查詢詳情",
-                    "text": f"{row_action_prefix} {car_no}",  # 例如：「車號 AAA-0000」
+                    "text": f"{row_action_prefix} {car_no} {a_date}",  # 例如：「車號 AAA-0000」
                 },
                 "paddingAll": "6px",
             }
@@ -942,7 +1194,7 @@ def build_list_bubbleA(
                 "height": "sm",
                 "action": {
                     "type": "message",
-                    "label": "上一頁",
+                    "label": "⏮️ 上一頁",
                     "text": f"列表 {query_cmd} {query_val} {page-1}",
                 },
             }
@@ -955,7 +1207,7 @@ def build_list_bubbleA(
                 "height": "sm",
                 "action": {
                     "type": "message",
-                    "label": "下一頁",
+                    "label": "⏭️ 下一頁",
                     "text": f"列表 {query_cmd} {query_val} {page+1}",
                 },
             }
@@ -996,7 +1248,202 @@ def build_list_pageA(
         query_cmd=query_cmd,
         query_val=query_val,
     )
-    return FlexSendMessage(alt_text="查詢今日洗車列表", contents=bubble)
+    return FlexSendMessage(alt_text="查詢洗車列表", contents=bubble)
+
+
+#############################################################################################<<
+
+
+def build_list_bubbleB(
+    rows,
+    title,
+    page,
+    total_pages,
+    row_action_prefix="其他日",
+    query_cmd="日期",
+    query_val="",
+):
+    # 標題列
+    header = {
+        "type": "box",
+        "layout": "horizontal",
+        "spacing": "sm",
+        "contents": [
+            {
+                "type": "text",
+                "text": "日期",
+                "size": "sm",
+                "weight": "bold",
+                "flex": 5,
+                "align": "center",
+                "wrap": True,
+            },
+            {
+                "type": "text",
+                "text": "車量(台)",
+                "size": "sm",
+                "weight": "bold",
+                "flex": 3,
+                "align": "center",
+                "wrap": True,
+            },
+            {
+                "type": "text",
+                "text": "日期標記",
+                "size": "sm",
+                "weight": "bold",
+                "flex": 4,
+                "align": "center",
+                "wrap": True,
+            },
+        ],
+    }
+
+    body = [
+        {
+            "type": "text",
+            "text": "區間日期查詢",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+            "color": "#000000",
+        },
+        {
+            "type": "text",
+            "text": f"{title}",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+        },
+        {
+            "type": "text",
+            "text": f"(第{page}/{total_pages}頁)",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+            "color": "#000000",
+            "wrap": True,
+        },
+        {"type": "separator", "margin": "md"},
+        header,
+        {"type": "separator", "margin": "sm"},
+    ]
+
+    # 資料列
+    for idx, d in enumerate(rows):
+        day = safe_text(d.get("day", "-"))
+        cnt = safe_text(d.get("cnt", "-"))
+        H_Note = safe_text(d.get("H_Note", "-"))
+
+        body.append(
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "backgroundColor": "#FFFFBB" if idx % 2 == 0 else "#E0FFFF",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": day,
+                        "size": "sm",
+                        "flex": 5,
+                        "wrap": True,
+                        "align": "center",
+                    },
+                    {
+                        "type": "text",
+                        "text": cnt,
+                        "size": "sm",
+                        "flex": 3,
+                        "wrap": True,
+                        "color": "#0000FF",
+                        "align": "center",
+                    },
+                    {
+                        "type": "text",
+                        "text": H_Note,
+                        "size": "sm",
+                        "flex": 4,
+                        "wrap": True,
+                        "color": "#000000",
+                        "align": "center",
+                    },
+                ],
+                "action": {
+                    "type": "message",
+                    "label": "查詢詳情",
+                    "text": f"{row_action_prefix} {day}",  # 例如：「車號 AAA-0000」
+                },
+                "paddingAll": "6px",
+            }
+        )
+        body.append({"type": "separator", "margin": "sm"})
+
+    # 分頁按鈕
+    footer_contents = []
+    if page > 1:
+        footer_contents.append(
+            {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                    "type": "message",
+                    "label": "⏮️ 上一頁",
+                    "text": f"日列 {query_cmd} {query_val} {page-1}",
+                },
+            }
+        )
+    if page < total_pages:
+        footer_contents.append(
+            {
+                "type": "button",
+                "style": "primary",
+                "height": "sm",
+                "action": {
+                    "type": "message",
+                    "label": "⏭️ 下一頁",
+                    "text": f"日列 {query_cmd} {query_val} {page+1}",
+                },
+            }
+        )
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": body,
+        },
+    }
+    if footer_contents:
+        bubble["footer"] = {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": footer_contents,
+        }
+    return bubble
+
+
+def build_list_pageB(
+    all_rows, page=1, title="查詢結果", query_cmd="名稱", query_val=""
+):
+    total = len(all_rows)
+    total_pages = max(1, (total + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * ROWS_PER_PAGE
+    page_rows = all_rows[start : start + ROWS_PER_PAGE]
+    bubble = build_list_bubbleB(
+        page_rows,
+        title=title,
+        page=page,
+        total_pages=total_pages,
+        query_cmd=query_cmd,
+        query_val=query_val,
+    )
+    return FlexSendMessage(alt_text="查詢洗車日期列表", contents=bubble)
 
 
 #############################################################################################<<
@@ -1015,20 +1462,112 @@ def safe_text(v, default="-"):
     return s if s else default
 
 
-from linebot.models import QuickReply, QuickReplyButton, MessageAction, TextSendMessage
+#############################################################################################<<
+def _to_date(s: str):
+    return datetime.strptime(s, "%Y-%m-%d").date()
 
-import requests
+
+@SECRET.add(PostbackEvent)
+def on_postback(event):
+    data_qs = parse_qs(event.postback.data or "")
+    act = (data_qs.get("act") or [""])[0]
+    kw = (data_qs.get("kw") or ["未指定"])[0]
+    start = (data_qs.get("start") or [""])[0] or None
+    end = (data_qs.get("end") or [""])[0] or None
+
+    picked = (event.postback.params or {}).get("date")  # 只有 datetimepicker 才會有
+
+    # 使用者剛選了起始日
+    if act == "set_start" and picked:
+        start = picked
+        # 若原本 already 有 end 但比 start 早 → 清空 end，要求重選
+        if end:
+            try:
+                if _to_date(end) < _to_date(start):
+                    end = None
+                    # 【★修改】改成顯示二選一泡泡（單日 / 續選結束日），不再只顯示原本泡泡
+                    msg = build_choose_next_step_bubble(
+                        kw, start, end
+                    )  # 【★新增 呼叫】
+                    line_bot_api.reply_message(event.reply_token, msg)
+                    return
+            except Exception:
+                end = None
+        # 【★修改】選完起始日一律顯示二選一泡泡
+        msg = build_choose_next_step_bubble(kw, start, end)  # 【★新增 呼叫】
+        line_bot_api.reply_message(event.reply_token, msg)
+        return
+
+    # 使用者剛選了結束日
+    if act == "set_end" and picked:
+        # 若結束日比起始日早 → 不接受，請重選結束日（保留 start）
+        if start:
+            try:
+                if _to_date(picked) < _to_date(start):
+                    msg = build_date_picker_bubble(
+                        kw, start, None, hint="結束日不可早於起始日，請重新選擇結束日"
+                    )
+                    line_bot_api.reply_message(event.reply_token, msg)
+                    return
+            except Exception:
+                pass
+        end = picked
+        msg = build_date_picker_bubble(kw, start, end)
+        line_bot_api.reply_message(event.reply_token, msg)
+        return
+
+    # 【★新增】單日查詢分支：使用者按了「查這一天」
+    if act == "submit_single":
+        if not start:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="請先選擇日期")
+            )
+            return
+        # ✅ 這裡執行你的「單日」查詢
+        # ... do single-day query with start ...
+        # line_bot_api.reply_message(
+        #    event.reply_token, TextSendMessage(text=f"日期 {start} {start}")
+        # )
+        return
+
+    # 送出前再做一次保險檢查
+    if act == "submit":
+        if not (start and end):
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="請先選擇起始日與結束日")
+            )
+            return
+        try:
+            if _to_date(end) < _to_date(start):
+                # 清掉 end，強制重選
+                msg = build_date_picker_bubble(
+                    kw, start, None, hint="結束日不可早於起始日，請重新選擇結束日"
+                )
+                line_bot_api.reply_message(event.reply_token, msg)
+                return
+        except Exception:
+            msg = build_date_picker_bubble(
+                kw, start, None, hint="日期格式錯誤，請重新選擇結束日"
+            )
+            line_bot_api.reply_message(event.reply_token, msg)
+            return
+
+        # ✅ 通過檢查，這裡執行你的查詢
+        # ... do query ...
+        line_bot_api.reply_message(
+            event.reply_token, TextSendMessage(text=f"日期 {start} {end}")
+        )
+        return
 
 
 @SECRET.add(MessageEvent, TextMessage)
 def handle_message(event):
-
     # 讀取用戶的ID
     user_id = event.source.user_id
     # print("發訊息的用戶 ID:",user_id)
 
     if user_id:
-        show_loading_raw(user_id, seconds=10)
+        show_loading_raw(user_id, seconds=15)
 
     url = f"https://hsue2000.synology.me/api/Qsearch.php?token={API_TOKEN}"
     data = {"action": "GET_COUNT"}
@@ -1092,7 +1631,7 @@ def handle_message(event):
                         },
                         {
                             "type": "text",
-                            "text": "版本: V1.0 (2025/8/21)",
+                            "text": "版本: V1.1 (2025/8/24)",
                             "size": "sm",
                             "weight": "bold",
                             "wrap": True,
@@ -1252,7 +1791,7 @@ def handle_message(event):
                                     "contents": [
                                         {
                                             "type": "text",
-                                            "text": "♦️ 車號 [車號]",
+                                            "text": "♦️ 今日",
                                             "weight": "bold",
                                             "size": "sm",
                                             "color": "#000000",
@@ -1260,7 +1799,30 @@ def handle_message(event):
                                         },
                                         {
                                             "type": "text",
-                                            "text": "查詢車籍車號",
+                                            "text": "查詢今日洗車資訊",
+                                            "weight": "bold",
+                                            "size": "sm",
+                                            "color": "#007AFF",
+                                            "flex": 6,
+                                            "wrap": True,
+                                        },
+                                    ],
+                                },
+                                {
+                                    "type": "box",
+                                    "layout": "baseline",
+                                    "contents": [
+                                        {
+                                            "type": "text",
+                                            "text": "♦️ 區間",
+                                            "weight": "bold",
+                                            "size": "sm",
+                                            "color": "#000000",
+                                            "flex": 6,
+                                        },
+                                        {
+                                            "type": "text",
+                                            "text": "查詢區間洗車資訊",
                                             "weight": "bold",
                                             "size": "sm",
                                             "color": "#007AFF",
@@ -1319,7 +1881,13 @@ def handle_message(event):
             try:
                 r = requests.get(
                     API_BASE_URL,
-                    params={"A_date": val, "ok": 1, "like": 1, "token": API_TOKEN},
+                    params={
+                        "A_date": val,
+                        "ok": 1,
+                        "ser": 0,
+                        "like": 1,
+                        "token": API_TOKEN,
+                    },
                     headers={"Accept": "application/json"},
                     timeout=10,
                 )
@@ -1439,6 +2007,94 @@ def handle_message(event):
             )
             return  # ← 其他條件分支也結束
 
+    elif user_text.startswith(("日列 ")):
+        tokens = user_text.split()
+        if len(tokens) < 3:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="參數不足")
+            )
+            return
+
+        # 頁碼：抓最後一個 token；不是數字就預設 1
+        try:
+            page = int(tokens[-1])
+            core_tokens = tokens[1:-1]  # 去掉頁碼
+        except ValueError:
+            page = 1
+            core_tokens = tokens[1:]
+
+        if not core_tokens:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="參數不足")
+            )
+            return
+
+        cmd = core_tokens[0]  # e.g. "日期"
+        core = " ".join(
+            core_tokens[1:]
+        )  # e.g. "2025-08-01,2025-08-19" 或 "2025-08-01 2025-08-19"
+
+        # --- 解析日期（耐用版）---
+        start_date = end_date = None
+        dates = []  # 先初始化，避免未定義
+
+        if "," in core:
+            s, e = core.split(",", 1)
+            start_date, end_date = s.strip(), e.strip()
+        else:
+            dates = re.findall(r"\b\d{4}-\d{2}-\d{2}\b", core)
+        if len(dates) >= 2:
+            start_date, end_date = dates[0], dates[1]
+
+        if not (start_date and end_date):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(
+                    text="日期參數缺少，請用：日列 日期 2025-08-01 2025-08-19 2"
+                ),
+            )
+            return
+
+        # 呼叫 API
+        params = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "ok": 0,
+            "ser": 2,
+            "like": 0,
+            "token": API_TOKEN,
+        }
+        r = requests.get(
+            API_BASE_URL,
+            params=params,
+            headers={"Accept": "application/json"},
+            timeout=10,
+        )
+        try:
+            rows_all = r.json()
+        except Exception:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="API 回應非 JSON")
+            )
+            return
+
+        if not isinstance(rows_all, list) or not rows_all:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="查無日期資料")
+            )
+            return
+
+        # 用「逗號」回填 query_val，之後上下頁都用同一格式，不會再被空白切裂
+        flex_msg = build_list_pageB(
+            all_rows=rows_all,
+            page=page,
+            title=f"{start_date} ~ {end_date}",
+            query_cmd="日期",
+            query_val=f"{start_date},{end_date}",
+        )
+        line_bot_api.reply_message(event.reply_token, flex_msg)
+        return
+
     elif user_text.startswith("車型 "):
         val = user_text.replace("車型 ", "").strip()
         encoded = quote(val)
@@ -1492,16 +2148,14 @@ def handle_message(event):
             )
         return
 
-    elif user_text.strip() == "今日":
-        # 取得今日日期 (YYYY/MM/DD)
-        from datetime import datetime
-        import pytz
+    elif user_text.startswith("今日") or user_text.startswith("其他日 "):
 
-        # 1) 取得今日日期 (YYYY-MM-DD)，這裡時區計算皆可換成「台灣時區」版本
-        taiwan_tz = pytz.timezone("Asia/Taipei")
-        today_str = datetime.now(taiwan_tz).strftime("%Y-%m-%d")
-
-        # today_str = "2025-08-16"
+        if user_text.startswith("今日"):
+            # 1) 取得今日日期 (YYYY-MM-DD)，這裡時區計算皆可換成「台灣時區」版本
+            taiwan_tz = pytz.timezone("Asia/Taipei")
+            today_str = datetime.now(taiwan_tz).strftime("%Y-%m-%d")
+        elif user_text.startswith("其他日 "):
+            today_str = user_text.replace("其他日 ", "").strip()
 
         # 2) 呼叫 PHP API（你的 PHP 是用 ?day=YYYY-MM-DD）
         #    用 params 比自己串 query string 更安全
@@ -1557,7 +2211,7 @@ def handle_message(event):
             flex = build_list_pageA(
                 rows,
                 page=1,
-                title=f"今日洗車：{data.get('query_day', today_str)}",
+                title=f"洗車日期：{data.get('query_day', today_str)}",
                 query_cmd="洗車",
                 query_val=today_str,
             )
@@ -1586,8 +2240,94 @@ def handle_message(event):
                 event.reply_token, TextSendMessage(text="查無車號資料")
             )
             return
+
+    elif user_text.startswith("日期 "):
+        content = user_text.replace("日期 ", "", 1).strip()
+        parts = content.split()  # 期望: ["2025-08-01", "2025-09-01"]
+
+        # 檢查兩個日期都有
+        if len(parts) < 2:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="用法：日期 2025-08-01 2025-09-01"),
+            )
+            return
+
+        start_date, end_date = parts[0], parts[1]
+
+        # （可選）基本格式檢查 YYYY-MM-DD
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start_date) or not re.fullmatch(
+            r"\d{4}-\d{2}-\d{2}", end_date
+        ):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(
+                    text="日期格式錯誤，請用 YYYY-MM-DD，例如：日期 2025-08-01 2025-09-01"
+                ),
+            )
+            return
+
+        # 呼叫 API（建議用 params）
+        params = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "ok": 0,
+            "ser": 2,
+            "like": 0,
+            "token": API_TOKEN,
+        }
+        r = requests.get(
+            API_BASE_URL,
+            params=params,
+            headers={"Accept": "application/json"},
+            timeout=10,
+        )
+
+        # 先看原始字串除錯（需要時打開）
+        # print(r.url); print(r.text)
+
+        # 解析 JSON
+        try:
+            res = r.json()
+        except Exception:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="API 回應非 JSON")
+            )
+            return
+
+        # 期待 API 回傳是 list，例如：[{ "day": "2025-08-01", "cnt": 3 }, ...]
+        if isinstance(res, list) and len(res) > 0:
+            # 第 1 頁
+            flex_msg = build_list_pageB(
+                all_rows=res,
+                page=1,
+                title=f"{start_date} ~ {end_date}",
+                query_cmd="日期",
+                query_val=f"{start_date} {end_date}",
+            )
+            line_bot_api.reply_message(event.reply_token, flex_msg)
+        else:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="查無日期資料")
+            )
+            return
+
+    elif user_text == "區間":
+        # 可以直接給個空 keyword 或預設值
+        keyword = "未指定"
+
+        # 呼叫你寫好的 build_date_picker_bubble
+        msg = build_date_picker_bubble(keyword=keyword, start=None, end=None)
+
+        line_bot_api.reply_message(event.reply_token, msg)
+
     elif user_text.startswith("服務 "):
-        serial_no = user_text.replace("服務 ", "").strip()
+        content = user_text.replace("服務 ", "").strip()
+        parts = content.split()  # ["AAA-111", "2025-08-23"]
+
+        serial_no = parts[0]  # 取第一個欄位 → "AAA-111"
+        date_str = parts[1] if len(parts) > 1 else None  # 取第二個欄位 → "2025-08-23"
+
         # ① 車籍
         r1 = requests.get(
             f"{API_BASE_URL}?car_no={serial_no}&ok=0&ser=0&like=1&token={API_TOKEN}",
@@ -1598,7 +2338,7 @@ def handle_message(event):
 
         # ② 洗車
         r2 = requests.get(
-            f"{API_BASE_URL}?A_car_no={serial_no}&ok=0&ser=1&like=1&token={API_TOKEN}",
+            f"{API_BASE_URL}?A_car_no={serial_no}&A_date={date_str}&ok=0&ser=1&like=0&token={API_TOKEN}",
             headers={"Accept": "application/json"},
             timeout=10,
         )
@@ -1654,5 +2394,3 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
-
-
