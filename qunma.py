@@ -487,7 +487,7 @@ def build_detail_flexA(
                 {"type": "box", "layout": "vertical", "height": "8px"},  # 下方留白
                 {
                     "type": "text",
-                    "text": "<今日洗車>",
+                    "text": "<洗車資料>",
                     "weight": "bold",
                     "size": "md",
                     "color": "#888888",
@@ -550,7 +550,7 @@ rich_menu = RichMenu(
     size=RichMenuSize(width=2500, height=843),  # 官方規格
     selected=False,  # 是否預設選單
     name="四格選單範例",  # 後台管理用名稱
-    chat_bar_text="打開選單",  # 使用者點選時顯示的文字
+    chat_bar_text="🔎 按這裡打開選單 🚗",  # 使用者點選時顯示的文字
     areas=[
         # 左1區塊
         RichMenuArea(
@@ -2412,4 +2412,5 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
