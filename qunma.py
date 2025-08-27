@@ -86,6 +86,9 @@ def build_detail_flex(data_dict):
         "color": "顏色",
         "note": "備註",
         "new_date": "編輯日期",
+        "washes_total": "累計洗車",
+        "washes_pass": "已完成",
+        "washes_fail": "未完成",
     }
 
     # ✅ 白名單：只顯示這些欄位（順序就是顯示順序）
@@ -97,6 +100,9 @@ def build_detail_flex(data_dict):
         "color",
         "note",
         "new_date",
+        "washes_total",
+        "washes_pass",
+        "washes_fail",
     ]
 
     # 標題優先顯示車號，其次姓名
@@ -127,8 +133,22 @@ def build_detail_flex(data_dict):
         "color": "#FF44AA",  # 粉紅色
     }
 
+    # --- 解析資料本體與統計 ---
+    if isinstance(data_dict, list):
+        data_dict = data_dict[0] if len(data_dict) > 0 else {}
+        totals = data_dict[1] if len(data_dict) > 1 else {}
+    else:
+
+        totals = {}
+
+    washes_total = int(totals.get("washes_total", 0) or 0)
+    washes_pass = int(totals.get("washes_pass", 0) or 0)
+    washes_fail = int(totals.get("washes_fail", 0) or 0)
+
     # ===== 欄位 rows =====
     rows = []
+    inserted_marker = False  # 【★新增】避免重複插入 <洗車紀錄>
+
     for k in allowed_fields:
         val_raw = data_dict.get(k, "")
 
@@ -167,6 +187,93 @@ def build_detail_flex(data_dict):
                     ],
                 }
             )
+
+        if not inserted_marker and len(rows) >= 7:
+            rows.extend(
+                [
+                    {"type": "separator", "margin": "lg"},
+                    {
+                        "type": "text",
+                        "text": "<洗車紀錄>",
+                        "weight": "bold",
+                        "size": "md",
+                        "color": "#888888",
+                    },
+                ]
+            )
+            inserted_marker = True
+
+    # 總數/通過/失敗 三列
+    rows.extend(
+        [
+            {
+                "type": "box",
+                "layout": "baseline",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "累計洗車",
+                        "size": "md",
+                        "color": "#666666",
+                        "flex": 3,
+                        "weight": "bold",
+                    },
+                    {
+                        "type": "text",
+                        "text": str(washes_total),
+                        "size": "md",
+                        "color": "#0047AB",
+                        "flex": 7,
+                    },
+                ],
+            },
+            {
+                "type": "box",
+                "layout": "baseline",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "已完成",
+                        "size": "md",
+                        "color": "#666666",
+                        "flex": 3,
+                        "weight": "bold",
+                    },
+                    {
+                        "type": "text",
+                        "text": str(washes_pass),
+                        "size": "md",
+                        "color": "#1E9E3A",
+                        "flex": 7,
+                    },
+                ],
+            },
+            {
+                "type": "box",
+                "layout": "baseline",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "未完成",
+                        "size": "md",
+                        "color": "#666666",
+                        "flex": 3,
+                        "weight": "bold",
+                    },
+                    {
+                        "type": "text",
+                        "text": str(washes_fail),
+                        "size": "md",
+                        "color": "#CC3333",
+                        "flex": 7,
+                    },
+                ],
+            },
+        ]
+    )
 
     # ===== Flex bubble =====
     bg = "#F8F8FF"
@@ -213,8 +320,20 @@ def build_detail_flex(data_dict):
         "footer": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": bg,
-            "contents": [],
+            "backgroundColor": "#F8F8FF",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "action": {
+                        "type": "message",
+                        "label": "🔍 查詢洗車紀錄",
+                        "text": f"紀錄 {data_dict.get("car_no")}",  # ← 會送出「洗車 AAA-111」
+                    },
+                }
+            ],
         },
     }
 
@@ -283,8 +402,8 @@ def build_detail_flexA(
         "new_date",
     ]
     allowed_wash_fields = [
-        "A_item",
         "A_date",
+        "A_item",
         "A_ord_time",
         "A_time",
         "A_money",
@@ -307,8 +426,8 @@ def build_detail_flexA(
         "new_date": "編輯日期",
     }
     wash_fields_map = {
-        "A_item": "服務項目",
         "A_date": "預約日期",
+        "A_item": "服務項目",
         "A_time": "交車時間",
         "A_ord_time": "預約時間",
         "A_money": "金額",
@@ -366,6 +485,8 @@ def build_detail_flexA(
 
     # ===== 洗車 rows（可多筆；若只要第一筆就改 for w in washes[:1]）=====
     rows_washed = []
+    inserted_marker = False  # 【★新增】避免重複插入 <洗車紀錄>
+
     if washes:
         for idx, w in enumerate(washes, start=1):
 
@@ -422,6 +543,20 @@ def build_detail_flexA(
                             ],
                         }
                     )
+                if not inserted_marker and len(rows_washed) >= 7:
+                    rows_washed.extend(
+                        [
+                            {"type": "separator", "margin": "lg"},
+                            {
+                                "type": "text",
+                                "text": "<洗車紀錄>",
+                                "weight": "bold",
+                                "size": "md",
+                                "color": "#888888",
+                            },
+                        ]
+                    )
+                    inserted_marker = True
     else:
         rows_washed.append(
             {"type": "text", "text": "（無洗車紀錄）", "size": "sm", "color": "#999999"}
@@ -484,7 +619,7 @@ def build_detail_flexA(
                 },
                 {"type": "box", "layout": "vertical", "height": "12px"},
                 {"type": "separator", "margin": "lg"},
-                {"type": "box", "layout": "vertical", "height": "8px"},  # 下方留白
+                # {"type": "box", "layout": "vertical", "height": "8px"},  # 下方留白
                 {
                     "type": "text",
                     "text": "<洗車資料>",
@@ -509,12 +644,24 @@ def build_detail_flexA(
                 },
             ],
         },
-        # ★ 加一個 footer（就算內容空，也讓底色一致）
+        # ★ 建議補個 footer，讓底部也同底色（就算沒有元件也可留空）
         "footer": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": bg,
-            "contents": [],
+            "backgroundColor": "#F8F8FF",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "action": {
+                        "type": "message",
+                        "label": "🔍 查詢洗車紀錄",
+                        "text": f"紀錄 {car_dict.get("car_no")}",  # ← 會送出「洗車 AAA-111」
+                    },
+                }
+            ],
         },
     }
     return FlexSendMessage(alt_text="洗車詳細資訊", contents=bubble)
@@ -541,6 +688,7 @@ whitelist = {uid.strip() for uid in whitelist_str.split(",") if uid.strip()}
 
 CHANNEL_ACCESS_TOKEN = (os.getenv("LINE_CHANNEL_ACCESS_TOKEN") or "").strip().strip('"')
 CHANNEL_SECRET = (os.getenv("LINE_CHANNEL_SECRET") or "").strip().strip('"')
+
 
 # 使用你的 Channel Access Token
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
@@ -578,9 +726,7 @@ rich_menu = RichMenu(
 rich_menu_id = line_bot_api.create_rich_menu(rich_menu=rich_menu)
 
 # 透過網址下載圖片
-image_url = (
-    "https://hsue2000.synology.me/images/Qunma_1x4_new.png"  # 改成你的 CDN/圖床位置
-)
+image_url = "https://hsue2000.synology.me/images/Qunma_richmenu_1x4.png"  # 改成你的 CDN/圖床位置
 response = requests.get(image_url)
 image_data = BytesIO(response.content)
 
@@ -1062,7 +1208,7 @@ def build_list_bubbleA(
                 "text": "車號",
                 "size": "xs",
                 "weight": "bold",
-                "flex": 3,
+                "flex": 5,
                 "align": "center",
                 "wrap": True,
             },
@@ -1080,7 +1226,7 @@ def build_list_bubbleA(
                 "text": "服務項目",
                 "size": "xs",
                 "weight": "bold",
-                "flex": 3,
+                "flex": 5,
                 "align": "center",
                 "wrap": True,
             },
@@ -1111,6 +1257,7 @@ def build_list_bubbleA(
             "size": "md",
             "align": "center",
         },
+        {"type": "separator", "margin": "md"},
         {
             "type": "text",
             "text": "狀態表示: ✅已完成｜❌未完成",
@@ -1140,9 +1287,9 @@ def build_list_bubbleA(
         a_status = safe_text(w.get("A_status", ""))
 
         if a_status == "已完成":
-            a_item = a_item + "✅"
+            a_item = a_item + " ✅"
         elif a_status == "未完成":
-            a_item = a_item + "❌"
+            a_item = a_item + " ❌"
         else:
             a_item = ""
 
@@ -1156,15 +1303,15 @@ def build_list_bubbleA(
                     {
                         "type": "text",
                         "text": car_no,
-                        "size": "sm",
-                        "flex": 3,
+                        "size": "xs",
+                        "flex": 5,
                         "wrap": True,
                         "align": "center",
                     },
                     {
                         "type": "text",
                         "text": name,
-                        "size": "sm",
+                        "size": "xs",
                         "flex": 3,
                         "wrap": True,
                         "align": "center",
@@ -1172,15 +1319,15 @@ def build_list_bubbleA(
                     {
                         "type": "text",
                         "text": a_item,
-                        "size": "sm",
-                        "flex": 3,
+                        "size": "xs",
+                        "flex": 5,
                         "wrap": True,
                         "align": "center",
                     },
                     {
                         "type": "text",
                         "text": f"{a_ord_time}".strip(),
-                        "size": "sm",
+                        "size": "xs",
                         "flex": 3,
                         "wrap": True,
                         "align": "center",
@@ -1458,6 +1605,205 @@ def build_list_pageB(
     return FlexSendMessage(alt_text="查詢洗車日期列表", contents=bubble)
 
 
+####################################################################################################
+def build_list_bubbleC(
+    rows,
+    title,
+    page,
+    total_pages,
+    row_action_prefix="服務",
+    columns=("A_car_no", "A_date", "A_time", "A_final", "A_status"),
+    query_cmd="紀錄",
+    query_val="",
+):
+    # 標題列
+    header = {
+        "type": "box",
+        "layout": "horizontal",
+        "spacing": "sm",
+        "contents": [
+            {
+                "type": "text",
+                "text": "預約日期",
+                "size": "xs",
+                "weight": "bold",
+                "flex": 6,
+                "align": "center",
+                "wrap": True,
+            },
+            {
+                "type": "text",
+                "text": "預約時間",
+                "size": "xs",
+                "weight": "bold",
+                "flex": 3,
+                "align": "center",
+                "wrap": True,
+            },
+            {
+                "type": "text",
+                "text": "狀態",
+                "size": "xs",
+                "weight": "bold",
+                "flex": 4,
+                "align": "center",
+                "wrap": True,
+            },
+        ],
+    }
+
+    body = [
+        {
+            "type": "text",
+            "text": f"{title}",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+        },
+        {
+            "type": "text",
+            "text": f"(第{page}/{total_pages}頁)",
+            "weight": "bold",
+            "size": "md",
+            "align": "center",
+        },
+        {"type": "separator", "margin": "md"},
+        {
+            "type": "text",
+            "text": "狀態表示: ✅已完成｜❌未完成",
+            "size": "xs",
+            "align": "center",
+            "color": "#666666",  # 6 碼 HEX
+            "wrap": True,
+            "margin": "sm",
+        },
+        {"type": "separator", "margin": "md"},
+        header,
+        {"type": "separator", "margin": "sm"},
+    ]
+
+    # 資料列
+    for idx, d in enumerate(rows):
+        A_car_no = str(d.get(columns[0], ""))
+        A_status = safe_text(d.get("A_status", "-"))
+        A_date = safe_text(d.get("A_date", "-"))
+
+        if A_status == "已完成":
+            A_status = A_status + " ✅"
+        elif A_status == "未完成":
+            A_status = A_status + " ❌"
+
+        body.append(
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "backgroundColor": "#FFFFBB" if idx % 2 == 0 else "#E0FFFF",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": format_date_with_weekday(
+                            safe_text(d.get("A_date"))
+                        ),  # 絕不會是空字串,
+                        "size": "xs",
+                        "flex": 6,
+                        "wrap": True,
+                        "align": "center",
+                    },
+                    {
+                        "type": "text",
+                        "text": safe_text(d.get("A_time")),  # 絕不會是空字串,
+                        "size": "xs",
+                        "flex": 3,
+                        "wrap": True,
+                        "align": "center",
+                    },
+                    {
+                        "type": "text",
+                        "text": A_status,  # 絕不會是空字串,
+                        "size": "xs",
+                        "flex": 4,
+                        "wrap": True,
+                        "align": "center",
+                    },
+                ],
+                "action": {
+                    "type": "message",
+                    "label": "查詢詳情",
+                    "text": f"{row_action_prefix} {A_car_no} {A_date}",
+                },
+                "paddingAll": "6px",
+            }
+        )
+        body.append({"type": "separator", "margin": "sm"})
+
+    # 分頁按鈕（把查詢種類與值帶回去）
+    footer_contents = []
+    if page > 1:
+        footer_contents.append(
+            {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                    "type": "message",
+                    "label": "⏮️ 上一頁",
+                    "text": f"歷史 {query_cmd} {query_val} {page-1}",
+                },
+            }
+        )
+    if page < total_pages:
+        footer_contents.append(
+            {
+                "type": "button",
+                "style": "primary",
+                "height": "sm",
+                "action": {
+                    "type": "message",
+                    "label": "⏭️ 下一頁",
+                    "text": f"歷史 {query_cmd} {query_val} {page+1}",
+                },
+            }
+        )
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": body,
+        },
+    }
+    if footer_contents:
+        bubble["footer"] = {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": footer_contents,
+        }
+    return bubble
+
+
+def build_list_pageC(
+    all_rows, page=1, title="查詢結果", query_cmd="紀錄", query_val=""
+):
+    total = len(all_rows)
+    total_pages = max(1, (total + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * ROWS_PER_PAGE
+    page_rows = all_rows[start : start + ROWS_PER_PAGE]
+    bubble = build_list_bubbleC(
+        page_rows,
+        title=title,
+        page=page,
+        total_pages=total_pages,
+        query_cmd=query_cmd,
+        query_val=query_val,
+    )
+    return FlexSendMessage(alt_text="查詢洗車紀錄列表", contents=bubble)
+
+
 #############################################################################################<<
 def format_phone(phone: str) -> str:
     """將10碼電話轉成 xxxx-xxx-xxx 格式"""
@@ -1476,7 +1822,7 @@ def safe_text(v, default="-"):
 
 #############################################################################################<<
 def _to_date(s: str):
-    return datetime.strptime(s, "%Y-%m-%d").date()
+    return datetime.datetime.strptime(s, "%Y-%m-%d").date()
 
 
 @SECRET.add(PostbackEvent)
@@ -1513,20 +1859,18 @@ def on_postback(event):
     # 使用者剛選了結束日
     if act == "set_end" and picked:
         # 若結束日比起始日早 → 不接受，請重選結束日（保留 start）
-        if start:
-            try:
-                if _to_date(picked) < _to_date(start):
-                    msg = build_date_picker_bubble(
-                        kw, start, None, hint="⚠️ 結束日不可早於起始日，請重新選擇結束日"
-                    )
-                    line_bot_api.reply_message(event.reply_token, msg)
-                    return
-            except Exception:
-                pass
-        end = picked
-        msg = build_date_picker_bubble(kw, start, end)
-        line_bot_api.reply_message(event.reply_token, msg)
-        return
+
+        if _to_date(picked) < _to_date(start):
+            msg = build_date_picker_bubble(
+                kw, start, None, hint="⚠️ 結束日不可早於起始日，請重新選擇結束日"
+            )
+            line_bot_api.reply_message(event.reply_token, msg)
+            return
+        else:
+            end = picked
+            msg = build_date_picker_bubble(kw, start, end)
+            line_bot_api.reply_message(event.reply_token, msg)
+            return
 
     # 【★新增】單日查詢分支：使用者按了「查這一天」
     if act == "submit_single":
@@ -2019,6 +2363,77 @@ def handle_message(event):
             )
             return  # ← 其他條件分支也結束
 
+    elif user_text.startswith(("歷史 ")):
+        # ★修正：全形空白→半形，再切片
+        raw = (user_text or "").replace("\u3000", " ").strip()
+        parts = raw.split()
+
+        # 期待：歷史 <查詢種類> <查詢值> [頁碼]
+        if len(parts) < 3:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(
+                    text="格式：歷史 <查詢種類> <查詢值> [頁碼]\n例如：歷史 紀錄 AAA-111 2"
+                ),
+            )
+            return
+
+        query_cmd = parts[1]  # 例：紀錄
+        # ★修正：頁碼可省略；若最後一段是數字當頁碼，否則預設 1
+        if len(parts) >= 4 and parts[-1].isdigit():
+            page = int(parts[-1])
+            query_val = " ".join(parts[2:-1])  # 中間都視為查詢值（支援含空白）
+        else:
+            page = 1
+            query_val = " ".join(parts[2:])
+
+        # ===== 呼叫 API =====
+        params = {
+            "A_car_no": query_val,
+            "ok": 0,
+            "ser": 3,
+            "like": 0,
+            "token": API_TOKEN,
+        }
+        try:
+            r = requests.get(
+                API_BASE_URL,
+                params=params,
+                headers={"Accept": "application/json"},
+                timeout=10,
+            )
+            r.raise_for_status()  # ★修正：補 HTTP 錯誤檢查
+            rows_all = r.json()
+        except requests.exceptions.RequestException as e:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text=f"⚠️ API 連線失敗：{e}")
+            )
+            return
+        except ValueError:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="⚠️ API 回應非 JSON")
+            )
+            return
+
+        # ★修正：確認 rows_all 型別並非空
+        if not isinstance(rows_all, list) or not rows_all:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"⚠️ 找不到「{query_cmd} {query_val}」的歷史紀錄"),
+            )
+            return
+
+        # ★修正：把正確的資料變數丟進分頁元件
+        flex = build_list_pageC(
+            all_rows=rows_all,
+            page=page,
+            title=f"歷史 {query_cmd}：{query_val}",
+            query_cmd=query_cmd,
+            query_val=query_val,
+        )
+        line_bot_api.reply_message(event.reply_token, flex)
+        return
+
     elif user_text.startswith(("日列 ")):
         tokens = user_text.split()
         if len(tokens) < 3:
@@ -2157,6 +2572,25 @@ def handle_message(event):
         else:
             line_bot_api.reply_message(
                 event.reply_token, TextSendMessage(text="⚠️ 查無備註資料")
+            )
+        return
+
+    elif user_text.startswith("紀錄 "):
+        val = user_text.replace("紀錄 ", "").strip()
+        encoded = quote(val)
+        api_url = (
+            f"{API_BASE_URL}?A_car_no={encoded}&ok=0&ser=3&like=0&token={API_TOKEN}"
+        )
+        res = requests.get(api_url).json()  # 預期回傳 list[dict]
+
+        if isinstance(res, list) and res:
+            flex = build_list_pageC(
+                res, page=1, title=f"紀錄：{val}", query_cmd="紀錄", query_val=val
+            )
+            line_bot_api.reply_message(event.reply_token, flex)
+        else:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="⚠️ 查無洗車紀錄")
             )
         return
 
@@ -2324,10 +2758,6 @@ def handle_message(event):
                 query_val=f"{start_date} {end_date}",
             )
             line_bot_api.reply_message(event.reply_token, flex_msg)
-        else:
-            line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="⚠️ 查無日期資料")
-            )
             return
 
     elif user_text == "區間":
@@ -2412,5 +2842,3 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
-
-
