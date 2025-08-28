@@ -86,9 +86,6 @@ def build_detail_flex(data_dict):
         "color": "顏色",
         "note": "備註",
         "new_date": "編輯日期",
-        "washes_total": "累計洗車",
-        "washes_pass": "已完成",
-        "washes_fail": "未完成",
     }
 
     # ✅ 白名單：只顯示這些欄位（順序就是顯示順序）
@@ -100,9 +97,6 @@ def build_detail_flex(data_dict):
         "color",
         "note",
         "new_date",
-        "washes_total",
-        "washes_pass",
-        "washes_fail",
     ]
 
     # 標題優先顯示車號，其次姓名
@@ -133,145 +127,106 @@ def build_detail_flex(data_dict):
         "color": "#FF44AA",  # 粉紅色
     }
 
-    # --- 解析資料本體與統計 ---
-    if isinstance(data_dict, list):
-        data_dict = data_dict[0] if len(data_dict) > 0 else {}
-        totals = data_dict[1] if len(data_dict) > 1 else {}
-    else:
-
-        totals = {}
-
-    washes_total = int(totals.get("washes_total", 0) or 0)
-    washes_pass = int(totals.get("washes_pass", 0) or 0)
-    washes_fail = int(totals.get("washes_fail", 0) or 0)
-
+    STATS_KEYS = {"washes_total", "washes_pass", "washes_fail"}
     # ===== 欄位 rows =====
     rows = []
-    inserted_marker = False  # 【★新增】避免重複插入 <洗車紀錄>
 
     for k in allowed_fields:
+        if k in STATS_KEYS:  # ← 防止重複
+            continue
+
         val_raw = data_dict.get(k, "")
+        val = format_phone(val_raw) if k == "tel" else val_raw
 
-        # 只在電話欄位做 10 碼格式化（你也可依實際欄位名稱調整）
-        if k in ("tel"):
-            val = format_phone(val_raw)
-        else:
-            val = val_raw
-
-        if str(val).strip():
-            value_color = FIELD_COLOR_MAP.get(k, "#0000FF")  # 預設藍色
-            rows.append(
-                {
-                    "type": "box",
-                    "layout": "baseline",
-                    "spacing": "sm",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": field_map.get(k, k),
-                            "size": "md",
-                            "color": "#666666",
-                            "flex": 3,
-                            "weight": "bold",
-                            "align": "start",  # ✅ 靠左
-                        },
-                        {
-                            "type": "text",
-                            "text": str(val),
-                            "size": "md",
-                            "color": value_color,
-                            "wrap": True,
-                            "flex": 7,
-                            "align": "start",  # ✅ 靠左
-                        },
-                    ],
-                }
-            )
-
-        if not inserted_marker and len(rows) >= 7:
-            rows.extend(
-                [
-                    {"type": "separator", "margin": "lg"},
+        # if str(val).strip():
+        value_color = FIELD_COLOR_MAP.get(k, "#0000FF")  # 預設藍色
+        rows.append(
+            {
+                "type": "box",
+                "layout": "baseline",
+                "spacing": "sm",
+                "contents": [
                     {
                         "type": "text",
-                        "text": "<洗車紀錄>",
-                        "weight": "bold",
+                        "text": field_map.get(k, k),
                         "size": "md",
-                        "color": "#888888",
+                        "color": "#666666",
+                        "flex": 3,
+                        "weight": "bold",
+                        "align": "start",  # ✅ 靠左
                     },
-                ]
-            )
-            inserted_marker = True
+                    {
+                        "type": "text",
+                        "text": (str(val) if str(val).strip() else "無"),
+                        "size": "md",
+                        "color": value_color,
+                        "wrap": True,
+                        "flex": 7,
+                        "align": "start",  # ✅ 靠左
+                    },
+                ],
+            }
+        )
 
-    # 總數/通過/失敗 三列
+    # === 2) 最後統一插入分隔＋三個統計欄位 ===
+
+    def make_stat_row(label, value, color="#0000FF"):
+        return {
+            "type": "box",
+            "layout": "baseline",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": label,
+                    "size": "md",
+                    "color": "#666666",
+                    "flex": 3,
+                    "weight": "bold",
+                    "align": "start",
+                },
+                {
+                    "type": "text",
+                    "text": str(value),
+                    "size": "md",
+                    "color": color,
+                    "flex": 7,
+                    "align": "start",
+                },
+            ],
+        }
+
+    # 若三個值在變數；若放在 data_dict 也可以從那裡拿
+    w_total = (
+        washes_total
+        if "washes_total" in locals()
+        else int(data_dict.get("washes_total", 0) or 0)
+    )
+    w_pass = (
+        washes_pass
+        if "washes_pass" in locals()
+        else int(data_dict.get("washes_pass", 0) or 0)
+    )
+    w_fail = (
+        washes_fail
+        if "washes_fail" in locals()
+        else int(data_dict.get("washes_fail", 0) or 0)
+    )
+
+    # 只要有統計欄位，就插入分隔與三列（就算是 0 也顯示）
     rows.extend(
         [
+            {"type": "separator", "margin": "lg"},
             {
-                "type": "box",
-                "layout": "baseline",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "累計洗車",
-                        "size": "md",
-                        "color": "#666666",
-                        "flex": 3,
-                        "weight": "bold",
-                    },
-                    {
-                        "type": "text",
-                        "text": str(washes_total),
-                        "size": "md",
-                        "color": "#0047AB",
-                        "flex": 7,
-                    },
-                ],
+                "type": "text",
+                "text": "<洗車紀錄>",
+                "weight": "bold",
+                "size": "md",
+                "color": "#888888",
             },
-            {
-                "type": "box",
-                "layout": "baseline",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "已完成",
-                        "size": "md",
-                        "color": "#666666",
-                        "flex": 3,
-                        "weight": "bold",
-                    },
-                    {
-                        "type": "text",
-                        "text": str(washes_pass),
-                        "size": "md",
-                        "color": "#1E9E3A",
-                        "flex": 7,
-                    },
-                ],
-            },
-            {
-                "type": "box",
-                "layout": "baseline",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "未完成",
-                        "size": "md",
-                        "color": "#666666",
-                        "flex": 3,
-                        "weight": "bold",
-                    },
-                    {
-                        "type": "text",
-                        "text": str(washes_fail),
-                        "size": "md",
-                        "color": "#CC3333",
-                        "flex": 7,
-                    },
-                ],
-            },
+            make_stat_row("洗車次數", w_total, "#0047AB"),
+            make_stat_row("已完成", w_pass, "#1E9E3A"),
+            make_stat_row("未完成", w_fail, "#CC3333"),
         ]
     )
 
@@ -409,9 +364,6 @@ def build_detail_flexA(
         "A_money",
         "A_status",
         "A_note",
-        "washes_total",
-        "washes_pass",
-        "washes_fail",
     ]
 
     car_field_map = {
@@ -433,9 +385,6 @@ def build_detail_flexA(
         "A_money": "金額",
         "A_status": "狀態",
         "A_note": "洗車備註",
-        "washes_total": "累計洗車",
-        "washes_pass": "已完成",
-        "washes_fail": "未完成",
     }
 
     def safe_text(x):
@@ -484,83 +433,144 @@ def build_detail_flexA(
             )
 
     # ===== 洗車 rows（可多筆；若只要第一筆就改 for w in washes[:1]）=====
+    STATS_KEYS = {"washes_total", "washes_pass", "washes_fail"}
     rows_washed = []
-    inserted_marker = False  # 【★新增】避免重複插入 <洗車紀錄>
 
     if washes:
         for idx, w in enumerate(washes, start=1):
-
             for k in allowed_wash_fields:
+                if k in STATS_KEYS:  # 避免三個統計欄位在一般欄位重複出現
+                    continue
+
                 val = w.get(k, "")
+                val_color = FIELD_COLOR_MAP.get(k, "#0000FF")  # 預設藍色
 
-                # 預設顏色從 FIELD_COLOR_MAP 取，沒有就給藍色
-                val_color = FIELD_COLOR_MAP.get(k, "#0000FF")
-
-                # 動態決定顏色
+                # 動態決定顏色與文字
                 if k == "A_status":
                     if val == "已完成":
-                        val = val + " ✅"
+                        val = f"{val} ✅"
                         val_color = "#9400D3"  # 紫色
                     elif val == "未完成":
-                        val = val + " ❌"
+                        val = f"{val} ❌"
                         val_color = "#FF8C00"  # 橘色
                     else:
-                        val = val + "查無資料"
+                        val = f"{val}查無資料"
                         val_color = "#FF0000"  # 紅色
 
-                # ★fix: 只有在欄位是 A_date 才做日期格式化
+                # 只有 A_date 才做日期格式化
                 if k == "A_date":
-                    if val:
-                        val = format_date_with_weekday(val)  # e.g. "2025-08-24(日)"
-                    else:
-                        val = "未選擇"
+                    val = format_date_with_weekday(val) if val else "未選擇"
 
-                if safe_text(val):
-                    rows_washed.append(
-                        {
-                            "type": "box",
-                            "layout": "baseline",
-                            "spacing": "sm",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": wash_fields_map.get(k, k),
-                                    "size": "md",
-                                    "color": "#666666",
-                                    "flex": 3,
-                                    "weight": "bold",
-                                    "align": "start",
-                                },
-                                {
-                                    "type": "text",
-                                    "text": safe_text(val),
-                                    "size": "md",
-                                    "color": val_color,
-                                    "wrap": True,
-                                    "flex": 7,
-                                    "align": "start",
-                                },
-                            ],
-                        }
-                    )
-                if not inserted_marker and len(rows_washed) >= 7:
-                    rows_washed.extend(
-                        [
-                            {"type": "separator", "margin": "lg"},
+                rows_washed.append(
+                    {
+                        "type": "box",
+                        "layout": "baseline",
+                        "spacing": "sm",
+                        "contents": [
                             {
                                 "type": "text",
-                                "text": "<洗車紀錄>",
-                                "weight": "bold",
+                                "text": wash_fields_map.get(k, k),
                                 "size": "md",
-                                "color": "#888888",
+                                "color": "#666666",
+                                "flex": 3,
+                                "weight": "bold",
+                                "align": "start",
                             },
-                        ]
-                    )
-                    inserted_marker = True
+                            {
+                                "type": "text",
+                                "text": (str(val).strip() or "無"),
+                                "size": "md",
+                                "color": val_color,
+                                "wrap": True,
+                                "flex": 7,
+                                "align": "start",
+                            },
+                        ],
+                    }
+                )
     else:
         rows_washed.append(
             {"type": "text", "text": "（無洗車紀錄）", "size": "sm", "color": "#999999"}
         )
+
+    # === 只在最後三個欄位前插入一次分隔＋<洗車紀錄> ===
+    rows_washed.extend(
+        [
+            {"type": "separator", "margin": "lg"},
+            {
+                "type": "text",
+                "text": "<洗車紀錄>",
+                "weight": "bold",
+                "size": "md",
+                "color": "#888888",
+            },
+        ]
+    )
+
+    def make_stat_row(label, value, color="#0000FF"):
+        return {
+            "type": "box",
+            "layout": "baseline",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": label,
+                    "size": "md",
+                    "color": "#666666",
+                    "flex": 3,
+                    "weight": "bold",
+                    "align": "start",
+                },
+                {
+                    "type": "text",
+                    "text": str(value),
+                    "size": "md",
+                    "color": color,
+                    "flex": 7,
+                    "align": "start",
+                },
+            ],
+        }
+
+    # 取得統計數值：優先用 washes 內的 totals dict，否則用 A_status 聚合
+    totals_dict = None
+    if isinstance(washes, list):
+        totals_dict = next(
+            (
+                d
+                for d in washes
+                if isinstance(d, dict) and any(k in d for k in STATS_KEYS)
+            ),
+            None,
+        )
+
+    if totals_dict:
+        w_total = int(totals_dict.get("washes_total", 0) or 0)
+        w_pass = int(totals_dict.get("washes_pass", 0) or 0)
+        w_fail = int(totals_dict.get("washes_fail", 0) or 0)
+    else:
+        w_total = w_pass = w_fail = 0
+    if isinstance(washes, list):
+        for itm in washes:
+            if not isinstance(itm, dict) or any(k in itm for k in STATS_KEYS):
+                continue
+            st = str(itm.get("A_status", "")).strip()
+            if st:
+                w_total += 1
+                if st == "已完成":
+                    w_pass += 1
+                elif st == "未完成":
+                    w_fail += 1
+
+    # 追加三個統計欄位（就算是 0 也要顯示）
+    rows_washed.extend(
+        [
+            make_stat_row("洗車次數", w_total, "#0047AB"),
+            make_stat_row("已完成", w_pass, "#1E9E3A"),
+            make_stat_row("未完成", w_fail, "#CC3333"),
+        ]
+    )
 
     # ===== Flex bubble =====
     bg = "#FFFFF0"
@@ -679,12 +689,21 @@ API_TOKEN = os.getenv("API_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL")
 
 # 可使用的 LINE 使用者 ID 列表（White List）
+whitelist = {
+    "Ub48499f073b0bd08e280ef8259978933",  # 用戶A-Ken
+    "U073ecd7ad08b5e6f43736355fe8239e9",  # 用戶B-尉庭
+    "U2b172ae3f85d31f169915ca02330a589",  # 用戶C-爸爸
+    # 請將你自己的 LINE ID 也加入
+}
+
+"""
 # 從 Vercel 的環境變數讀取
 whitelist_str = os.getenv("LINE_WHITELIST", "")
 
 # 轉成 set（自動去除空白）
 whitelist = {uid.strip() for uid in whitelist_str.split(",") if uid.strip()}
 # print(whitelist)
+"""
 
 CHANNEL_ACCESS_TOKEN = (os.getenv("LINE_CHANNEL_ACCESS_TOKEN") or "").strip().strip('"')
 CHANNEL_SECRET = (os.getenv("LINE_CHANNEL_SECRET") or "").strip().strip('"')
@@ -1987,7 +2006,7 @@ def handle_message(event):
                         },
                         {
                             "type": "text",
-                            "text": "版本: V1.1 (2025/8/24)",
+                            "text": "版本: V1.2 (2025/8/28)",
                             "size": "sm",
                             "weight": "bold",
                             "wrap": True,
