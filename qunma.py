@@ -2778,6 +2778,12 @@ def handle_message(event):
             )
             line_bot_api.reply_message(event.reply_token, flex_msg)
             return
+        else:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=f"⚠️ 查無資料!"),
+        )
+        return
 
     elif user_text == "區間":
         # 可以直接給個空 keyword 或預設值
@@ -2861,3 +2867,4 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
