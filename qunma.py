@@ -688,6 +688,13 @@ SECRET = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 API_TOKEN = os.getenv("API_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL")
 
+# 可使用的 LINE 使用者 ID 列表（White List）
+whitelist = {
+    "Ub48499f073b0bd08e280ef8259978933",  # 用戶A-Ken
+    "U073ecd7ad08b5e6f43736355fe8239e9",  # 用戶B-尉庭
+    "U2b172ae3f85d31f169915ca02330a589",  # 用戶C-爸爸
+    # 請將你自己的 LINE ID 也加入
+}
 """
 # 從 Vercel 的環境變數讀取
 whitelist_str = os.getenv("LINE_WHITELIST", "")
@@ -2855,6 +2862,7 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
 
 
