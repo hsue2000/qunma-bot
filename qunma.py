@@ -988,7 +988,6 @@ def build_list_bubble(
     rows,
     title,
     page,
-    total,
     total_pages,
     row_action_prefix="車號",
     columns=("car_no", "name", "sex", "car_type", "color"),
@@ -1046,14 +1045,6 @@ def build_list_bubble(
             "text": f"{title}",
             "weight": "bold",
             "size": "md",
-            "align": "center",
-        },
-        {
-            "type": "text",
-            "text": f"總共:{total}筆",
-            "weight": "bold",
-            "size": "md",
-            "color": "#007AFF",
             "align": "center",
         },
         {
@@ -1212,7 +1203,6 @@ def build_list_bubbleA(
     rows,
     title,
     page,
-    total,
     total_pages,
     row_action_prefix="服務",
     query_cmd="名稱",
@@ -1269,14 +1259,6 @@ def build_list_bubbleA(
             "text": f"{title}",
             "weight": "bold",
             "size": "md",
-            "align": "center",
-        },
-        {
-            "type": "text",
-            "text": f"總共:{total}筆",
-            "weight": "bold",
-            "size": "md",
-            "color": "#007AFF",
             "align": "center",
         },
         {
@@ -1431,7 +1413,6 @@ def build_list_pageA(
     bubble = build_list_bubbleA(
         page_rows,
         title=title,
-        total=total,
         page=page,
         total_pages=total_pages,
         query_cmd=query_cmd,
@@ -1445,7 +1426,6 @@ def build_list_bubbleB(
     rows,
     title,
     page,
-    total,
     total_pages,
     row_action_prefix="其他日",
     query_cmd="日期",
@@ -1501,14 +1481,6 @@ def build_list_bubbleB(
             "text": f"{title}",
             "weight": "bold",
             "size": "md",
-            "align": "center",
-        },
-        {
-            "type": "text",
-            "text": f"總共:{total}筆",
-            "weight": "bold",
-            "size": "md",
-            "color": "#007AFF",
             "align": "center",
         },
         {
@@ -1634,7 +1606,6 @@ def build_list_pageB(
     bubble = build_list_bubbleB(
         page_rows,
         title=title,
-        total=total,
         page=page,
         total_pages=total_pages,
         query_cmd=query_cmd,
@@ -1648,7 +1619,6 @@ def build_list_bubbleC(
     rows,
     title,
     page,
-    total,
     total_pages,
     row_action_prefix="服務",
     columns=("A_car_no", "A_date", "A_time", "A_final", "A_status"),
@@ -2885,6 +2855,7 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
 
 
