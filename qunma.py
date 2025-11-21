@@ -688,14 +688,6 @@ SECRET = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 API_TOKEN = os.getenv("API_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL")
 
-# 可使用的 LINE 使用者 ID 列表（White List）
-whitelist = {
-    "Ub48499f073b0bd08e280ef8259978933",  # 用戶A-Ken
-    "U073ecd7ad08b5e6f43736355fe8239e9",  # 用戶B-尉庭
-    "U2b172ae3f85d31f169915ca02330a589",  # 用戶C-爸爸
-    # 請將你自己的 LINE ID 也加入
-}
-
 """
 # 從 Vercel 的環境變數讀取
 whitelist_str = os.getenv("LINE_WHITELIST", "")
@@ -996,6 +988,7 @@ def build_list_bubble(
     rows,
     title,
     page,
+    total,
     total_pages,
     row_action_prefix="車號",
     columns=("car_no", "name", "sex", "car_type", "color"),
@@ -1053,6 +1046,14 @@ def build_list_bubble(
             "text": f"{title}",
             "weight": "bold",
             "size": "md",
+            "align": "center",
+        },
+        {
+            "type": "text",
+            "text": f"總共:{total}筆",
+            "weight": "bold",
+            "size": "md",
+            "color": "#007AFF",
             "align": "center",
         },
         {
@@ -1211,6 +1212,7 @@ def build_list_bubbleA(
     rows,
     title,
     page,
+    total,
     total_pages,
     row_action_prefix="服務",
     query_cmd="名稱",
@@ -1267,6 +1269,14 @@ def build_list_bubbleA(
             "text": f"{title}",
             "weight": "bold",
             "size": "md",
+            "align": "center",
+        },
+        {
+            "type": "text",
+            "text": f"總共:{total}筆",
+            "weight": "bold",
+            "size": "md",
+            "color": "#007AFF",
             "align": "center",
         },
         {
@@ -1421,6 +1431,7 @@ def build_list_pageA(
     bubble = build_list_bubbleA(
         page_rows,
         title=title,
+        total=total,
         page=page,
         total_pages=total_pages,
         query_cmd=query_cmd,
@@ -1430,12 +1441,11 @@ def build_list_pageA(
 
 
 #############################################################################################<<
-
-
 def build_list_bubbleB(
     rows,
     title,
     page,
+    total,
     total_pages,
     row_action_prefix="其他日",
     query_cmd="日期",
@@ -1491,6 +1501,14 @@ def build_list_bubbleB(
             "text": f"{title}",
             "weight": "bold",
             "size": "md",
+            "align": "center",
+        },
+        {
+            "type": "text",
+            "text": f"總共:{total}筆",
+            "weight": "bold",
+            "size": "md",
+            "color": "#007AFF",
             "align": "center",
         },
         {
@@ -1616,6 +1634,7 @@ def build_list_pageB(
     bubble = build_list_bubbleB(
         page_rows,
         title=title,
+        total=total,
         page=page,
         total_pages=total_pages,
         query_cmd=query_cmd,
@@ -1629,6 +1648,7 @@ def build_list_bubbleC(
     rows,
     title,
     page,
+    total,
     total_pages,
     row_action_prefix="服務",
     columns=("A_car_no", "A_date", "A_time", "A_final", "A_status"),
@@ -2006,7 +2026,7 @@ def handle_message(event):
                         },
                         {
                             "type": "text",
-                            "text": "版本: V1.2 (2025/8/28)",
+                            "text": "版本: V1.2 (2025/11/21)",
                             "size": "sm",
                             "weight": "bold",
                             "wrap": True,
@@ -2865,5 +2885,6 @@ def handle_message(event):
 
 if __name__ == "__main__":
     app.run(port=5000)
+
 
 
