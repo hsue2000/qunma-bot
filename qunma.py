@@ -105,12 +105,12 @@ def build_detail_flex(data_dict):
     # ==== 處理圖片連結 ====
     sex = str(data_dict.get("sex", "")).strip()
     male_url = (
-        "https://hsue2000.synology.me/images/male.png"  # 主圖片網址（要改成你的）
+        "https://qunma.site.je/Images/male.png"  # 主圖片網址（要改成你的）
     )
     female_url = (
-        "https://hsue2000.synology.me/images/female.png"  # 主圖片網址（要改成你的）
+        "https://qunma.site.je/Images/female.png"  # 主圖片網址（要改成你的）
     )
-    people_url = "https://hsue2000.synology.me/images/people.png"  # 備用圖片
+    people_url = "https://qunma.site.je/Images/people.png"  # 備用圖片
 
     if sex == "男":
         pic_url = male_url
@@ -306,12 +306,12 @@ def build_detail_flexA(
     # ==== 處理圖片連結 ====
     sex = str(car_dict.get("sex", "")).strip()
     male_url = (
-        "https://hsue2000.synology.me/images/male.png"  # 主圖片網址（要改成你的）
+        "https://qunma.site.je/Images/male.png"  # 主圖片網址（要改成你的）
     )
     female_url = (
-        "https://hsue2000.synology.me/images/female.png"  # 主圖片網址（要改成你的）
+        "hhttps://qunma.site.je/Images/female.png"  # 主圖片網址（要改成你的）
     )
-    people_url = "https://hsue2000.synology.me/images/people.png"  # 備用圖片
+    people_url = "https://qunma.site.je/Images/people.png"  # 備用圖片
 
     if sex == "男":
         pic_url = male_url
@@ -744,7 +744,7 @@ rich_menu = RichMenu(
 #rich_menu_id = line_bot_api.create_rich_menu(rich_menu=rich_menu)
 
 # 透過網址下載圖片
-image_url = "https://hsue2000.synology.me/images/Qunma_richmenu_1x4-1.png"  # 改成你的 CDN/圖床位置
+image_url = "https://qunma.site.je/Images/Qunma_richmenu_1x4-1.png"  # 改成你的 CDN/圖床位置
 response = requests.get(image_url)
 image_data = BytesIO(response.content)
 
@@ -1941,7 +1941,7 @@ def handle_message(event):
     if user_id:
         show_loading_raw(user_id, seconds=15)
 
-    url = f"https://hsue2000.synology.me/api/Qsearch.php?token={API_TOKEN}"
+    url = f"https://qunma.site.je/api/Qsearch.php?token={API_TOKEN}"
     data = {"action": "GET_COUNT"}
 
     response = requests.post(url, data=data)
@@ -1964,7 +1964,7 @@ def handle_message(event):
                 "backgroundColor": "#FFF9C4",  # ✅ 整個泡泡背景
                 "hero": {
                     "type": "image",
-                    "url": "https://hsue2000.synology.me/images/KenKen.png",  # 🖼️ 替換為作者頭像圖片 URL
+                    "url": "https://qunma.site.je/Images/KenKen.png",  # 🖼️ 替換為作者頭像圖片 URL
                     "size": "full",
                     "backgroundColor": "#E0FFFF",  # ✅ 修改這裡為你想要的底色
                     "aspectRatio": "1:1",
@@ -2039,7 +2039,7 @@ def handle_message(event):
                     "contents": [
                         {
                             "type": "image",
-                            "url": "https://hsue2000.synology.me/images/qunma1.png",  # 圖片 URL (必須 HTTPS)
+                            "url": "https://qunma.site.je/Images/qunma1.png",  # 圖片 URL (必須 HTTPS)
                             "size": "md",
                             "aspect_ratio": "1:1",
                             "aspect_mode": "cover",
