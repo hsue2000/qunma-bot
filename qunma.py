@@ -756,7 +756,16 @@ def get_remote_image(image_url):
     except Exception as e:
         print(f"下載圖片失敗: {e}")
         return None
-image_data = BytesIO(response.content)
+#image_data = BytesIO(response.content)
+# ✅ 修改方式：加上檢查或包在 try...except / if 裡面
+try:
+    if 'response' in locals() and response is not None and hasattr(response, 'content'):
+        image_data = BytesIO(response.content)
+    else:
+        image_data = None # 或者給予預設處理
+except Exception as e:
+    print(f"處理圖片發生錯誤: {e}")
+    image_data = None
 
 # 上傳圖片
 #line_bot_api.set_rich_menu_image(rich_menu_id, "image/png", image_data)
