@@ -745,7 +745,17 @@ rich_menu = RichMenu(
 
 # 透過網址下載圖片
 image_url = "https://qunma.site.je/Images/Qunma_richmenu_1x4-1.png"  # 改成你的 CDN/圖床位置
-response = requests.get(image_url)
+#response = requests.get(image_url)
+# ✅ 應該包在函式或 Route 裡面，並加上 try...except 異常處理：
+def get_remote_image(image_url):
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(image_url, headers=headers, timeout=5)
+        response.raise_for_status()
+        return response.content
+    except Exception as e:
+        print(f"下載圖片失敗: {e}")
+        return None
 image_data = BytesIO(response.content)
 
 # 上傳圖片
