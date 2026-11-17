@@ -1963,7 +1963,15 @@ def handle_message(event):
     url = f"https://qunma.site.je/api/Qsearch.php?token={API_TOKEN}"
     data = {"action": "GET_COUNT"}
 
-    response = requests.post(url, data=data)
+    #response = requests.post(url, data=data)
+    # ✅ 修改方式：加上 try...except 與逾時設定，避免主程式直接崩潰噴 500
+try:
+    response = requests.post(url, data=data, timeout=10)
+    response.raise_for_status() # 檢查 HTTP 狀態碼
+    # 後續處理...
+except requests.exceptions.RequestException as e:
+    print(f"連線或傳送至遠端主機失敗: {e}")
+    # 這裡可以寫備用處理邏輯，或回傳友善訊息給 Line Bot
 
     # 檢查是否為白名單成員
     if user_id not in whitelist:
